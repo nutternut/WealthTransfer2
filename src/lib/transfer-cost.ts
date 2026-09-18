@@ -69,6 +69,8 @@ export type TransferCostInput = {
   acquisitionMethod?: string;
   assetCategory?: string;
   assetSubtype?: string;
+  /** ชื่อทรัพย์ — ใช้จำแนกฐานมรดกเมื่อประเภทเป็นค่าทั่วไป */
+  assetName?: string;
   ownerIsJuristic?: boolean;
   receivers?: { name: string; share: number; taxClass?: ReceiverTaxClass; occasion?: GiftBucket }[];
   giftDurationYears?: number;
@@ -696,7 +698,11 @@ function realEstateInheritanceCosts(
   const assessed = feeBase(input) * maritalEstateFactor(input.ownershipStatus);
   const slices = receiverSlices(input, assessed);
   const omitTax = Boolean(input.omitInheritanceTax);
-  const taxable = isInheritanceTaxableAsset(input.assetCategory, input.assetSubtype);
+  const taxable = isInheritanceTaxableAsset(
+    input.assetCategory,
+    input.assetSubtype,
+    input.assetName,
+  );
 
   let fee = 0;
   let inheritTax = 0;
@@ -736,7 +742,7 @@ function realEstateInheritanceCosts(
         ? `คำนวณรวมระดับแผน · ผู้รับ+เจ้ามรดก · ยกเว้น ${INHERIT_EXEMPT / 1e6} ลบ.`
         : !taxable
           ? "ไม่เข้าฐานภาษีมรดกตามทรัพย์ห้ากลุ่ม"
-          : `ยกเว้น ${INHERIT_EXEMPT / 1e6} ลบ./ผู้รับ/เจ้ามรดก · ทายาท 5% / คนอื่น 10% · คู่สมรส 0`,
+          : `รวมฐานผู้รับต่อเจ้ามรดก แล้วหักยกเว้น ${INHERIT_EXEMPT / 1e6} ลบ./คน ก่อนคูณทายาท 5% / คนอื่น 10% · คู่สมรส 0`,
       legalRef: "พ.ร.บ.ภาษีการรับมรดก พ.ศ. 2558",
     },
     {
@@ -832,7 +838,11 @@ function movableInheritanceCosts(
   const value = valueBase(input) * factor;
   const slices = receiverSlices(input, value);
   const omitTax = Boolean(input.omitInheritanceTax);
-  const taxable = isInheritanceTaxableAsset(input.assetCategory, input.assetSubtype);
+  const taxable = isInheritanceTaxableAsset(
+    input.assetCategory,
+    input.assetSubtype,
+    input.assetName,
+  );
   const holding = isHoldingCompany(input.assetCategory, input.assetSubtype);
 
   if (input.entityOwned) {
@@ -864,7 +874,7 @@ function movableInheritanceCosts(
         ? `คำนวณรวมระดับแผน · ผู้รับ+เจ้ามรดก · ยกเว้น ${INHERIT_EXEMPT / 1e6} ลบ.`
         : !taxable
           ? "ไม่เข้าฐานภาษีมรดกตามทรัพย์ห้ากลุ่ม"
-          : `คู่สมรสยกเว้นภาษี · ทายาท 5% / คนอื่น 10% หลัง ${INHERIT_EXEMPT / 1e6} ลบ./เจ้ามรดก`,
+          : `รวมฐานผู้รับต่อเจ้ามรดก แล้วหักยกเว้น ${INHERIT_EXEMPT / 1e6} ลบ./คน ก่อนคูณทายาท 5% / คนอื่น 10%`,
       legalRef: "พ.ร.บ.ภาษีการรับมรดก พ.ศ. 2558",
     },
   ];
@@ -1201,11 +1211,20 @@ export function inheritanceTaxBaseValue(input: {
   assessedValue: number;
   assetCategory?: string;
   assetSubtype?: string;
+  assetName?: string;
   ownershipStatus?: OwnershipStatus | string;
   entityOwned?: boolean;
 }): number {
   if (input.entityOwned) return 0;
-  if (!isInheritanceTaxableAsset(input.assetCategory, input.assetSubtype)) return 0;
+  if (
+    !isInheritanceTaxableAsset(
+      input.assetCategory,
+      input.assetSubtype,
+      input.assetName,
+    )
+  ) {
+    return 0;
+  }
   const factor = maritalEstateFactor(input.ownershipStatus);
   if (isRealEstate(input.assetCategory, input.assetSubtype)) {
     const base = input.assessedValue > 0 ? input.assessedValue : input.transferValue;

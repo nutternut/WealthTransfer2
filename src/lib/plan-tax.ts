@@ -482,6 +482,7 @@ export function applyAggregatedPlanTaxes(params: {
       acquisitionMethod: asset?.method,
       assetCategory: asset?.type,
       assetSubtype: asset?.subtype,
+      assetName: asset?.name ?? item.asset,
       ownerIsJuristic: entityOwned,
       entityOwned,
       ownershipStatus: (asset as { ownershipStatus?: string })?.ownershipStatus,
@@ -589,6 +590,7 @@ export function applyAggregatedPlanTaxes(params: {
       assessedValue: input.assessedValue,
       assetCategory: input.assetCategory,
       assetSubtype: input.assetSubtype,
+      assetName: input.assetName ?? item.asset,
       ownershipStatus: input.ownershipStatus,
       entityOwned: input.entityOwned,
     });

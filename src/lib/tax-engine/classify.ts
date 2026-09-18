@@ -158,13 +158,20 @@ export function classifyMovableSecurity(
 }
 
 /**
- * ทรัพย์ห้ากลุ่มตาม พ.ร.บ.ภาษีการรับมรดก — นอกนี้ไม่เข้าฐานอัตโนมัติ
+ * ทรัพย์ห้ากลุ่มตาม พ.ร.บ.ภาษีการรับมรดก พ.ศ. 2558
+ * อสังหา / หลักทรัพย์ / เงินฝาก / ยานพาหนะ — ดูชื่อทรัพย์ด้วยถ้าประเภทเป็นค่าทั่วไป
  */
 export function isInheritanceTaxableAsset(
   category?: string,
   subtype?: string,
+  name?: string,
 ): boolean {
-  const s = `${category ?? ""} ${subtype ?? ""}`;
+  const s = `${category ?? ""} ${subtype ?? ""} ${name ?? ""}`;
+  if (isRealEstate(category, subtype) || isRealEstate(name, undefined)) return true;
+  if (/หุ้น|กองทุน|พันธบัตร|หุ้นกู้|หลักทรัพย์|โฮลดิ้ง|Holding|เงินฝาก/.test(s)) {
+    return true;
+  }
+  if (/รถยนต์|รถจักรยานยนต์|ยานพาหนะ|เรือ|เครื่องบิน/.test(s)) return true;
   if (
     /ทอง|พระ|ศิลปะ|ของสะสม|เครื่องประดับ|เงินสด|ดิจิทัล|กรมธรรม์|ประกันชีวิต/.test(
       s,
@@ -172,12 +179,6 @@ export function isInheritanceTaxableAsset(
   ) {
     return false;
   }
-  if (isRealEstate(category, subtype)) return true;
-  if (/หุ้น|กองทุน|พันธบัตร|หุ้นกู้|หลักทรัพย์|โฮลดิ้ง|Holding/.test(s)) {
-    return true;
-  }
-  if (/เงินฝาก/.test(s)) return true;
-  if (/รถยนต์|รถจักรยานยนต์|ยานพาหนะ|เรือ|เครื่องบิน/.test(s)) return true;
   if (/ทรัพย์สินทางการเงิน/.test(s) && !/เงินสด/.test(s)) return true;
   return false;
 }

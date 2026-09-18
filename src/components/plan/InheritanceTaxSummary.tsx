@@ -29,7 +29,7 @@ export function InheritanceTaxSummary({
         </div>
         <div className="flex items-center">
           <h2 className="text-sm font-bold text-slate-900">
-            ภาษีรับมรดก — รวมต่อผู้รับและเจ้ามรดก
+            ภาษีรับมรดก — รวมต่อผู้รับแล้วหัก 100 ลบ./คน
           </h2>
         </div>
       </div>
@@ -40,7 +40,8 @@ export function InheritanceTaxSummary({
               <tr className="text-[10px] font-semibold tracking-wider text-slate-400 uppercase">
                 <th className="py-2 pr-3 font-semibold">ผู้รับ</th>
                 <th className="py-2 pr-3 font-semibold">เจ้ามรดก</th>
-                <th className="py-2 pr-3 text-right font-semibold">มรดกรวม</th>
+                <th className="py-2 pr-3 text-right font-semibold">รวมฐาน</th>
+                <th className="py-2 pr-3 text-right font-semibold">หักยกเว้น</th>
                 <th className="py-2 pr-3 text-right font-semibold">ส่วนเกิน</th>
                 <th className="py-2 text-right font-semibold">ภาษี</th>
               </tr>
@@ -56,6 +57,9 @@ export function InheritanceTaxSummary({
                   </td>
                   <td className="py-2.5 pr-3 text-right tabular-nums text-slate-700">
                     {money(row.totalReceived)}
+                  </td>
+                  <td className="py-2.5 pr-3 text-right tabular-nums text-slate-700">
+                    {money(row.exempt)}
                   </td>
                   <td className="py-2.5 pr-3 text-right tabular-nums text-slate-700">
                     {money(row.taxable)}
@@ -74,7 +78,7 @@ export function InheritanceTaxSummary({
         </div>
         {!hasTaxable ? (
           <p className="mt-2 text-[11px] text-slate-400">
-            ยังไม่มีผู้รับที่มรดกรวมเกิน {INHERIT_EXEMPT / 1e6} ลบ. — ไม่มีภาษีรับมรดก
+            ยังไม่มีผู้รับที่มรดกรวมเกิน {INHERIT_EXEMPT / 1e6} ลบ. — หักยกเว้นต่อคนแล้วไม่มีส่วนเกินให้คิด 5%
           </p>
         ) : null}
         <div className="mt-3 flex justify-end">

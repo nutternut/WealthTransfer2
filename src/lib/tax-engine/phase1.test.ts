@@ -217,6 +217,86 @@ describe("inheritance", () => {
     expect(rows[0]?.tax).toBe(1_500_000);
   });
 
+  it("มรดกกองทุน+เงินฝาก+หุ้น รวมทั้งก้อน หัก 100 ลบ./คน แล้วคูณ 5%", () => {
+    const result = applyAggregatedPlanTaxes({
+      assets: [
+        asset({
+          id: "F1",
+          name: "กองทุนรวมผสม",
+          type: "ทรัพย์สินอื่น",
+          subtype: "อื่น ๆ",
+          value: 22_500_000,
+        }),
+        asset({
+          id: "D1",
+          name: "เงินฝากประจำธนาคาร",
+          type: "ทรัพย์สินอื่น",
+          subtype: "อื่น ๆ",
+          value: 50_000_000,
+        }),
+        asset({
+          id: "S1",
+          name: "หุ้นบริษัทจดทะเบียนในตลาดหลักทรัพย์",
+          type: "หุ้นส่วนบริษัท",
+          subtype: "หุ้นบริษัทมหาชนจำกัด",
+          value: 45_000_000,
+        }),
+        asset({
+          id: "S2",
+          name: "หุ้น บริษัท AB ฟู้ดส์ จำกัด",
+          type: "หุ้นส่วนบริษัท",
+          subtype: "หุ้นบริษัทจำกัด",
+          value: 150_000_000,
+        }),
+      ],
+      members: [member("คุณ C", "บุตร")],
+      plan: [
+        planItem({
+          id: "P1",
+          asset: "กองทุนรวมผสม",
+          assetId: "F1",
+          owner: "คุณ A",
+          receiver: "คุณ C",
+          method: "มรดก",
+          year: "เมื่อรับมรดก",
+        }),
+        planItem({
+          id: "P2",
+          asset: "เงินฝากประจำธนาคาร",
+          assetId: "D1",
+          owner: "คุณ A",
+          receiver: "คุณ C",
+          method: "มรดก",
+          year: "เมื่อรับมรดก",
+        }),
+        planItem({
+          id: "P3",
+          asset: "หุ้นบริษัทจดทะเบียนในตลาดหลักทรัพย์",
+          assetId: "S1",
+          owner: "คุณ A",
+          receiver: "คุณ C",
+          method: "มรดก",
+          year: "เมื่อรับมรดก",
+        }),
+        planItem({
+          id: "P4",
+          asset: "หุ้น บริษัท AB ฟู้ดส์ จำกัด",
+          assetId: "S2",
+          owner: "คุณ A",
+          receiver: "คุณ C",
+          method: "มรดก",
+          year: "เมื่อรับมรดก",
+        }),
+      ],
+    });
+    expect(result.inheritanceByReceiver[0]?.totalReceived).toBe(267_500_000);
+    expect(result.inheritanceByReceiver[0]?.exempt).toBe(100_000_000);
+    expect(result.inheritanceByReceiver[0]?.taxable).toBe(167_500_000);
+    expect(result.totalInheritanceTax).toBe(8_375_000);
+    const inheritYear = result.yearEstimates.find((y) => y.year === "เมื่อรับมรดก");
+    expect(inheritYear?.inheritanceTax).toBe(8_375_000);
+  });
+
   it("รับจากเจ้ามรดกต่างคนแยกฐาน", () => {
     const rows = summarizeInheritanceTaxByReceiver([
       {
@@ -266,6 +346,24 @@ describe("inheritance", () => {
         assetSubtype: "ทองคำ",
       }),
     ).toBe(0);
+  });
+
+  it("ชื่อกองทุนหรือเงินฝากเข้าฐานมรดกแม้ประเภทเป็นค่าทั่วไป", () => {
+    expect(
+      isInheritanceTaxableAsset("ทรัพย์สินอื่น", "อื่น ๆ", "กองทุนรวมผสม"),
+    ).toBe(true);
+    expect(
+      isInheritanceTaxableAsset("ทรัพย์สินอื่น", "อื่น ๆ", "เงินฝากประจำธนาคาร"),
+    ).toBe(true);
+    expect(
+      inheritanceTaxBaseValue({
+        transferValue: 50_000_000,
+        assessedValue: 50_000_000,
+        assetCategory: "ทรัพย์สินอื่น",
+        assetSubtype: "อื่น ๆ",
+        assetName: "เงินฝากประจำธนาคาร",
+      }),
+    ).toBe(50_000_000);
   });
 });
 

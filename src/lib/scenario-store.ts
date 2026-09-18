@@ -139,6 +139,7 @@ export function calculateScenario(input: {
     acquisitionMethod: input.acquisitionMethod,
     assetCategory: input.assetCategory,
     assetSubtype: input.assetSubtype,
+    assetName: input.assetName,
     ownerIsJuristic: input.ownerIsJuristic,
     giftDurationYears: input.giftDurationYears,
     receivers: input.receivers.map((r) => ({

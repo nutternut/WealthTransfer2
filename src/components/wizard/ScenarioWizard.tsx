@@ -1097,6 +1097,7 @@ function ResultView({
     acquisitionMethod,
     assetCategory,
     assetSubtype,
+    assetName: scenario.asset,
     ownerIsJuristic,
     giftDurationYears: parseGiftDurationYears(scenario.year) ?? 1,
     receivers: (receivers ?? scenario.receivers ?? []).map((r) => ({
