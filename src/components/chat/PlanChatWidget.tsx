@@ -143,23 +143,32 @@ function stepLabel(event: {
  *  ข้อมูลยังมาครบใน state (anchors / fetchedAt) และยังอยู่ใน audit ของ engine เปิดกลับได้บรรทัดเดียว */
 const SHOW_CITATIONS: boolean = false;
 
-/** anchor ของคลัง: doc-id#m42, doc-id#m41ทวิ, doc-id#k1 หรือ doc-id เฉย ๆ
- *  ต้องมีขีดใน id หรือมี # — จะได้ไม่กิน (26) ใน "มาตรา 42 (26)" หรือคำอังกฤษในวงเล็บ */
-const ANCHOR = String.raw`(?:[a-z][a-z0-9]*(?:-[a-z0-9]+)+(?:#[^\s(),;]+)?|[a-z][a-z0-9]*#[^\s(),;]+)`;
-/** (anchor) · (anchor, anchor) · (อ้างอิง: anchor) พร้อมช่องว่างข้างหน้า */
+/** anchor ของคลัง: doc-id#m42, doc-id#m41ทวิ, doc-id#k2.32, doc-id#m91/2 หรือ doc-id เฉย ๆ
+ *  ทุก doc-id มีขีดเสมอ (rd-revenue-code, dol-fees-taxes-duties) จึงบังคับให้มีขีดอย่างน้อยหนึ่ง
+ *  แล้วจะไม่กิน (27) ใน "มาตรา 42 (27)", "ร้อยละ 0.5" หรือคำอังกฤษคำเดียวที่ไม่มีขีด */
+const ANCHOR = String.raw`[a-z][a-z0-9]*(?:-[a-z0-9]+)+(?:#[^\s(),;»]+)?`;
+/** anchor ที่ไหนก็ตาม: ในวงเล็บ (rd-revenue-code#m42), โดด ๆ ท้ายคำพูด «...» rd-revenue-code#m42,
+ *  หรือหลายตัวคั่นด้วย , ; · — โมเดลต่างตัวพ่นคนละแบบ จึงตัดทุกแบบ */
 const INLINE_CITE = new RegExp(
   String.raw`[ \t]*\((?:อ้างอิง\s*:?\s*)?${ANCHOR}(?:\s*[,;·]\s*${ANCHOR})*\)`,
+  "g",
+);
+const BARE_CITE = new RegExp(
+  String.raw`[ \t]*${ANCHOR}(?:\s*[,;·]\s*${ANCHOR})*`,
   "g",
 );
 /** บรรทัด "อ้างอิง: ..." ท้ายคำตอบ ทั้งบรรทัด (รวมแบบตัวหนา **อ้างอิง:**) */
 const CITE_LINE = /^[ \t]*\**อ้างอิง\**\s*:.*$/gm;
 
-/** ตัดการอ้างอิงออกจากข้อความก่อนแสดง — ตัวตรวจของ engine ตรวจข้อความเต็มไปแล้วก่อนถึงตรงนี้ */
+/** ตัดการอ้างอิงออกจากข้อความก่อนแสดง — ตัวตรวจของ engine ตรวจข้อความเต็ม (พร้อม anchor)
+ *  ไปแล้วก่อนถึงตรงนี้ และ audit/Langfuse ยังเก็บข้อความเต็มไว้ครบ */
 function forDisplay(text: string): string {
   return text
     .replace(CITE_LINE, "")
     .replace(INLINE_CITE, "")
+    .replace(BARE_CITE, "")
     .replace(/[ \t]+(?=[,.;:)»])/g, "")
+    .replace(/[ \t]{2,}/g, " ")
     .replace(/\n{3,}/g, "\n\n")
     .trim();
 }
