@@ -14,6 +14,19 @@ export function proxy(request: NextRequest) {
   const isLoggedIn = Boolean(session);
   const isLoginPage = pathname === "/login";
 
+  // Route handler ต้องได้ 401 JSON ไม่ใช่ 307 ไปหน้า login: fetch() ฝั่ง client
+  // จะ follow redirect แล้วได้ HTML มา ทำให้ res.json() โยน error และแชท
+  // รายงานว่า "ติดต่อผู้ช่วยไม่ได้" ทั้งที่ปัญหาคือเซสชันหมดอายุ
+  if (pathname.startsWith("/api/")) {
+    if (!isLoggedIn) {
+      return NextResponse.json(
+        { error: { code: "unauthorized", message: "เซสชันหมดอายุ กรุณาเข้าสู่ระบบใหม่" } },
+        { status: 401 },
+      );
+    }
+    return NextResponse.next();
+  }
+
   if (!isLoggedIn && !isLoginPage) {
     const loginUrl = new URL("/login", request.url);
     if (pathname !== "/") {

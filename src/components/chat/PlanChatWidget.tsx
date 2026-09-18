@@ -1,17 +1,9 @@
 "use client";
 
 import { useEffect, useId, useRef, useState } from "react";
-import { MessageCircle, MessageSquarePlus, Minus, Send, Sparkles, X } from "lucide-react";
+import { MessageCircle, MessageSquarePlus, Minus, Send, Sparkles, Square, X } from "lucide-react";
 import ReactMarkdown, { type Components } from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { money } from "@/lib/format";
-
-export type ChatPlanHints = {
-  cashNeeded?: number;
-  giftTax?: number;
-  inheritanceTax?: number;
-  status?: string;
-};
 
 type ChatMessage = {
   id: string;
@@ -19,6 +11,17 @@ type ChatMessage = {
   text: string;
   thinking?: boolean;
   streaming?: boolean;
+  /** มาตราที่คำตอบนี้อ้าง — มาจากบริการ ไม่ใช่จากการอ่านข้อความ */
+  anchors?: string[];
+  /** วันที่ดึงตัวบท: กฎภาษีไทยแก้ทุกปี คำตอบที่ไม่บอกวินเทจใช้งานไม่ได้ */
+  fetchedAt?: string[];
+  /** บริการปฏิเสธเพราะตัวบทในคลังตอบไม่ได้ — ไม่ใช่ข้อผิดพลาด */
+  refused?: boolean;
+  /** เรียกบริการไม่สำเร็จ */
+  error?: boolean;
+  /** ขั้นตอนที่บริการรายงานระหว่างคิด — เก็บไว้หลังตอบเสร็จด้วย เพราะมันคือ
+   *  หลักฐานว่าคำตอบมาจากการค้นตัวบท ไม่ใช่การเดา */
+  steps?: string[];
 };
 
 const STARTER: ChatMessage[] = [
@@ -26,19 +29,19 @@ const STARTER: ChatMessage[] = [
     id: "hello",
     role: "bot",
     text: [
-      "สวัสดีค่ะ นี่คือ**ผู้ช่วยแผนส่งต่อ**แบบทดลองใช้",
+      "สวัสดีค่ะ นี่คือ**ผู้ช่วยกฎหมายภาษีความมั่งคั่ง**",
       "",
-      "ถามเรื่องลำดับปี ภาษีการให้ มรดก หรือเงินสดที่ต้องเตรียมได้เลย",
+      "ถามเรื่องภาษีการรับมรดก การให้ หรือการขายอสังหาฯ ได้เลย คำตอบจะยกตัวบทและบอกเลขมาตราให้",
       "",
-      "> ตัวเลขเป็นประมาณการจากแผนนี้ ไม่ใช่คำวินิจฉัยทางภาษี",
+      "> ตอบจากคลังกฎหมายเท่านั้น ถ้าไม่มีตัวบทจะบอกว่าตอบไม่ได้ แทนการเดา",
     ].join("\n"),
   },
 ];
 
 const SUGGESTIONS = [
-  "ต้องเตรียมเงินสดเท่าไร",
-  "ภาษีการให้คิดยังไง",
-  "ภาษีมรดกใครเป็นผู้จ่าย",
+  "แม่โอนที่ดินให้ลูกโดยเสน่หา เสียภาษีไหม",
+  "ได้รับมรดก 150 ล้าน เสียภาษีเท่าไร",
+  "ภาษีการรับมรดกใครเป็นผู้มีหน้าที่เสีย",
 ];
 
 const markdownComponents: Components = {
@@ -70,103 +73,118 @@ function ThinkingDots() {
   );
 }
 
-function ThoughtPanel() {
+function StepList({ steps }: { steps: string[] }) {
+  return (
+    <ol className="mt-1 space-y-0.5">
+      {steps.map((step, i) => (
+        <li key={`${i}-${step}`} className="flex gap-1.5 text-[10px] text-slate-500">
+          <span className="text-slate-300">{i + 1}.</span>
+          <span className="break-all">{step}</span>
+        </li>
+      ))}
+    </ol>
+  );
+}
+
+function ThoughtPanel({ steps }: { steps?: string[] }) {
   return (
     <div className="max-w-[90%] px-1 py-1" aria-live="polite">
       <p className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-slate-500">
         <Sparkles className="h-3 w-3 animate-pulse text-mint-brand" />
-        กำลังคิด
+        {steps?.length ? "กำลังทำงาน" : "กำลังค้นตัวบท"}
         <ThinkingDots />
       </p>
+      {steps?.length ? <StepList steps={steps} /> : null}
     </div>
   );
 }
 
-function mockReply(input: string, hints?: ChatPlanHints): string {
-  const q = input.trim();
-  if (/เงินสด|เตรียม|cash/i.test(q)) {
-    if (hints?.cashNeeded != null) {
-      return [
-        `จากแผนที่เปิดอยู่ เงินสดที่ต้องเตรียมประมาณ **${money(hints.cashNeeded)}**`,
-        "",
-        "ครอบคลุม",
-        "- ภาษีการให้",
-        "- ภาษีมรดก",
-        "- ค่าธรรมเนียม และอากร",
-        "",
-        `สถานะผลคำนวณเป็น \`${hints.status ?? "Estimated"}\``,
-      ].join("\n");
+
+// 0.055 (55 ตัว/วิ) จูนไว้กับคำตอบ mock สั้น ๆ ของจริงวัดได้ ~1,300 ตัวอักษร
+// ซึ่งจะใช้เวลาพิมพ์ 24 วินาที ต่อท้ายการรอคำตอบอีก ~31 วินาที
+const ANSWER_CHARS_PER_MS = 0.35;
+
+/** uuid ของห้องแชท = thread_id ฝั่งบริการ ไม่ใช่การล็อกอิน คงอยู่ข้าม reload */
+const SESSION_KEY = "wt_ask_session";
+const UUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/** event ที่บริการส่งมา -> บรรทัดเดียวที่คนอ่านได้ ไม่รู้จักก็ข้าม */
+function stepLabel(event: {
+  type: string;
+  calls?: { name: string; args?: Record<string, unknown>; label?: string }[];
+}): string | null {
+  if (event.type === "retry") {
+    return "ข้อความที่ยกมาไม่ตรงตัวบท กำลังอ่านมาตราใหม่";
+  }
+  if (event.type !== "tool" || !event.calls?.length) return null;
+  const parts = event.calls.map((call) => {
+    const args = call.args ?? {};
+    switch (call.name) {
+      case "search_law":
+        return `ค้นตัวบท: ${String(args.question ?? "").slice(0, 40)}`;
+      case "read_section":
+        // engine ส่ง label เป็นชื่อกฎหมาย + มาตรา มาให้; ไม่มีก็โชว์ anchor ดิบ
+        return `อ่าน ${call.label ?? String(args.anchor ?? "")}`;
+      case "gaps":
+        return "ตรวจว่ากฎหมายฉบับนั้นอยู่ในคลังหรือไม่";
+      case "tax_inheritance":
+        return "คำนวณภาษีการรับมรดก";
+      case "exempt_gift":
+        return "คำนวณเพดานยกเว้นการให้";
+      default:
+        return call.name;
     }
-    return "เมื่อมีรายการในแผน ระบบจะรวมภาษีและค่าธรรมเนียมเป็นยอด**เงินสดที่ต้องเตรียม**ด้านล่างของหน้านี้";
-  }
-  if (/ให้|gift|42/i.test(q)) {
-    if (hints?.giftTax != null) {
-      return [
-        `ภาษีการให้ในแผนนี้ประมาณ **${money(hints.giftTax)}**`,
-        "",
-        "สะสมตาม **ผู้รับ + ปีภาษี**",
-        "- ญาติ ตาม ม.42(27) วงเงิน 20 ลบ.",
-        "- บุคคลอื่นตามเงื่อนไข ม.42(28) วงเงิน 10 ลบ.",
-        "- อสังหา ม.42(26) ยกเว้น 20 ลบ./บุตรชอบด้วยกฎหมาย/ปี",
-        "- ถ้าให้หลายคนหรือหลายปี ให้หารฐานตามจำนวนผู้รับและจำนวนปีก่อนคิดยกเว้น",
-      ].join("\n");
-    }
-    return [
-      "ภาษีการให้**ไม่คิดแยกรายทรัพย์** แต่รวมฐานทั้งปี",
-      "",
-      "- ญาติ / สังหาริมทรัพย์ — ยกเว้น 20 ลบ./ผู้รับ/ปี แล้วคูณส่วนเกิน 5%",
-      "- อสังหาให้บุตรชอบด้วยกฎหมาย — ฐานหารตามจำนวนผู้รับและจำนวนปี แล้วยกเว้น 20 ลบ./คน/ปี คูณส่วนเกิน 5%",
-    ].join("\n");
-  }
-  if (/มรดก|inherit/i.test(q)) {
-    if (hints?.inheritanceTax != null) {
-      return [
-        `ภาษีมรดกในแผนนี้ประมาณ **${money(hints.inheritanceTax)}**`,
-        "",
-        "- นับแยก **ผู้รับ + เจ้ามรดก**",
-        "- หักยกเว้น 100 ลบ. ต่อผู้รับต่อเจ้ามรดก",
-        "- ทองและพระเครื่องอยู่ในบัญชีแต่ไม่เข้าฐานอัตโนมัติ",
-        "- คู่สมรสยกเว้นภาษี แต่ค่าโอนอสังหายังมี",
-      ].join("\n");
-    }
-    return [
-      "ภาษีมรดกคิดต่อ**ผู้รับและเจ้ามรดก**แต่ละราย",
-      "",
-      "เฉพาะทรัพย์ห้ากลุ่มตามกฎหมาย ไม่ใช่รวมทุกทรัพย์ในบ้าน",
-    ].join("\n");
-  }
-  if (/ปี|timeline|ลำดับ/i.test(q)) {
-    return [
-      "หน้านี้เรียงตาม**ปีที่วางในแผน**",
-      "",
-      "แต่ละปีแยกวิธี",
-      "1. ให้",
-      "2. ขาย",
-      "3. มรดก",
-      "",
-      "กดดูรายการในลำดับการดำเนินการเพื่อดูทรัพย์และผู้รับ",
-    ].join("\n");
-  }
-  return [
-    "ตอนนี้เป็นแชทดลองใช้บนหน้าแผนเท่านั้น",
-    "",
-    "ลองถามเรื่อง",
-    "- เงินสดที่ต้องเตรียม",
-    "- ภาษีการให้",
-    "- ภาษีมรดก",
-    "",
-    "หรือเลือกคำถามด้านล่าง",
-  ].join("\n");
+  });
+  return parts.join(" · ");
 }
 
-const ANSWER_CHARS_PER_MS = 0.055;
-const THINK_MS = 900;
+/** โชว์รายการ "มาตราที่อ้าง" กับ "ข้อมูล ณ" ใต้คำตอบหรือไม่ — ปิดไว้ตามที่ขอให้เห็นแค่คำตอบ
+ *  ข้อมูลยังมาครบใน state (anchors / fetchedAt) และยังอยู่ใน audit ของ engine เปิดกลับได้บรรทัดเดียว */
+const SHOW_CITATIONS: boolean = false;
 
-type PlanChatWidgetProps = {
-  hints?: ChatPlanHints;
-};
+/** anchor ของคลัง: doc-id#m42, doc-id#m41ทวิ, doc-id#k1 หรือ doc-id เฉย ๆ
+ *  ต้องมีขีดใน id หรือมี # — จะได้ไม่กิน (26) ใน "มาตรา 42 (26)" หรือคำอังกฤษในวงเล็บ */
+const ANCHOR = String.raw`(?:[a-z][a-z0-9]*(?:-[a-z0-9]+)+(?:#[^\s(),;]+)?|[a-z][a-z0-9]*#[^\s(),;]+)`;
+/** (anchor) · (anchor, anchor) · (อ้างอิง: anchor) พร้อมช่องว่างข้างหน้า */
+const INLINE_CITE = new RegExp(
+  String.raw`[ \t]*\((?:อ้างอิง\s*:?\s*)?${ANCHOR}(?:\s*[,;·]\s*${ANCHOR})*\)`,
+  "g",
+);
+/** บรรทัด "อ้างอิง: ..." ท้ายคำตอบ ทั้งบรรทัด (รวมแบบตัวหนา **อ้างอิง:**) */
+const CITE_LINE = /^[ \t]*\**อ้างอิง\**\s*:.*$/gm;
 
-export function PlanChatWidget({ hints }: PlanChatWidgetProps) {
+/** ตัดการอ้างอิงออกจากข้อความก่อนแสดง — ตัวตรวจของ engine ตรวจข้อความเต็มไปแล้วก่อนถึงตรงนี้ */
+function forDisplay(text: string): string {
+  return text
+    .replace(CITE_LINE, "")
+    .replace(INLINE_CITE, "")
+    .replace(/[ \t]+(?=[,.;:)»])/g, "")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}
+
+function newSessionId(): string {
+  const id = crypto.randomUUID();
+  try {
+    localStorage.setItem(SESSION_KEY, id);
+  } catch {
+    // โหมดส่วนตัว / ปิด site data — แค่ทำให้ห้องแชทไม่ข้าม reload
+  }
+  return id;
+}
+
+function loadSessionId(): string {
+  try {
+    const saved = localStorage.getItem(SESSION_KEY);
+    if (saved && UUID_RE.test(saved)) return saved;
+  } catch {
+    // อ่านไม่ได้ก็สร้างใหม่
+  }
+  return newSessionId();
+}
+
+export function PlanChatWidget() {
   const titleId = useId();
   const confirmTitleId = useId();
   const [open, setOpen] = useState(false);
@@ -180,6 +198,13 @@ export function PlanChatWidget({ hints }: PlanChatWidgetProps) {
   const streamGen = useRef(0);
   const streamingRef = useRef(false);
   const timerRef = useRef(0);
+  const sessionIdRef = useRef("");
+  const abortRef = useRef<AbortController | null>(null);
+
+  // localStorage / crypto มีแต่ในเบราว์เซอร์ จึงอ่านใน effect ไม่ใช่ตอน render
+  useEffect(() => {
+    if (!sessionIdRef.current) sessionIdRef.current = loadSessionId();
+  }, []);
 
   useEffect(() => {
     if (!open) return;
@@ -192,6 +217,7 @@ export function PlanChatWidget({ hints }: PlanChatWidgetProps) {
     return () => {
       streamGen.current += 1;
       window.clearTimeout(timerRef.current);
+      abortRef.current?.abort();
     };
   }, []);
 
@@ -199,11 +225,15 @@ export function PlanChatWidget({ hints }: PlanChatWidgetProps) {
     streamGen.current += 1;
     streamingRef.current = false;
     window.clearTimeout(timerRef.current);
+    abortRef.current?.abort();
+    abortRef.current = null;
     setStreaming(false);
   }
 
   function resetChat() {
     stopStream();
+    // ห้องใหม่ = thread ใหม่ฝั่งบริการ ไม่งั้นบริบทเก่ายังตามมา
+    sessionIdRef.current = newSessionId();
     setMessages(STARTER);
     setDraft("");
     setConfirmNewChat(false);
@@ -213,7 +243,7 @@ export function PlanChatWidget({ hints }: PlanChatWidgetProps) {
     setMessages((rows) => rows.map((row) => (row.id === id ? { ...row, ...patch } : row)));
   }
 
-  function send(text: string) {
+  async function send(text: string) {
     const value = text.trim();
     if (!value || streamingRef.current) return;
     const gen = ++streamGen.current;
@@ -232,7 +262,98 @@ export function PlanChatWidget({ hints }: PlanChatWidgetProps) {
     setDraft("");
     setStreaming(true);
 
-    const full = mockReply(value, hints);
+    const sessionId = sessionIdRef.current || (sessionIdRef.current = loadSessionId());
+    const controller = new AbortController();
+    abortRef.current = controller;
+
+    let full = "";
+    let meta: Partial<ChatMessage> = {};
+    const steps: string[] = [];
+    try {
+      const res = await fetch("/api/ask/stream", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Accept: "text/event-stream" },
+        // ส่งแค่สองฟิลด์ตามสัญญาของบริการ — ตัวเลขแผนของลูกค้าไม่ออกไป (PDPA)
+        body: JSON.stringify({ sessionId, question: value }),
+        signal: controller.signal,
+      });
+
+      if (!res.ok || !res.body) {
+        // 400 จาก route handler (uuid/คำถามว่าง) หรือ 401 จาก proxy ยังเป็น JSON
+        const data = await res.json().catch(() => null);
+        full = data?.error?.message ?? "ตอบไม่สำเร็จ กรุณาลองใหม่";
+        meta = { error: true };
+      } else {
+        const reader = res.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = "";
+        let done = false;
+        while (!done) {
+          const chunk = await reader.read();
+          if (chunk.done) break;
+          buffer += decoder.decode(chunk.value, { stream: true });
+          // SSE คั่น event ด้วยบรรทัดว่าง — เก็บเศษท้ายไว้รอบถัดไป
+          const blocks = buffer.split("\n\n");
+          buffer = blocks.pop() ?? "";
+          for (const block of blocks) {
+            const line = block
+              .split("\n")
+              .find((row) => row.startsWith("data: "));
+            if (!line) continue;
+            let event: {
+              type: string;
+              answer?: string;
+              anchors?: string[];
+              fetched_at?: string[];
+              refused?: boolean;
+              message?: string;
+              calls?: { name: string; args?: Record<string, unknown>; label?: string }[];
+            };
+            try {
+              event = JSON.parse(line.slice("data: ".length));
+            } catch {
+              continue;
+            }
+            if (streamGen.current !== gen) return;
+            if (event.type === "answer") {
+              full = forDisplay(event.answer ?? "");
+              meta = {
+                anchors: event.anchors ?? [],
+                fetchedAt: event.fetched_at ?? [],
+                refused: Boolean(event.refused),
+              };
+              done = true;
+              break;
+            }
+            if (event.type === "error") {
+              full = event.message ?? "ระบบตอบคำถามไม่สำเร็จ";
+              meta = { error: true };
+              done = true;
+              break;
+            }
+            const label = stepLabel(event);
+            if (label) {
+              steps.push(label);
+              patchBot(botId, { steps: [...steps] });
+            }
+          }
+        }
+        reader.cancel().catch(() => {});
+        if (!full && !meta.error) {
+          // สตรีมจบโดยไม่มี answer — บริการตายกลางทาง
+          full = "การตอบถูกตัดกลางทาง กรุณาลองใหม่";
+          meta = { error: true };
+        }
+      }
+    } catch {
+      // ถูกกดหยุด / unmount: gen เปลี่ยนแล้ว ไม่ต้องเขียนอะไรลง state
+      if (streamGen.current !== gen) return;
+      full = "ติดต่อผู้ช่วยไม่ได้ กรุณาลองใหม่";
+      meta = { error: true };
+    }
+
+    if (streamGen.current !== gen) return;
+    abortRef.current = null;
 
     const tickAnswer = (startedAt: number) => {
       if (streamGen.current !== gen) return;
@@ -252,12 +373,15 @@ export function PlanChatWidget({ hints }: PlanChatWidgetProps) {
       timerRef.current = window.setTimeout(() => tickAnswer(startedAt), 30);
     };
 
-    // แสดงแค่ "กำลังคิด" สั้น ๆ แล้วขึ้นคำตอบเลย — ไม่พิมพ์ร่างแล้วลบ
+    // มาตราขึ้นพร้อมคำตอบตั้งแต่ต้น ไม่ต้องรอพิมพ์จบ
+    patchBot(botId, { thinking: false, text: "", streaming: true,
+                      steps: steps.length ? [...steps] : undefined, ...meta });
+    // อ่านเวลาใน callback ไม่ใช่ในตัวฟังก์ชัน — react-hooks/purity มองว่าการเรียก
+    // performance.now() ในตัว component เป็นการเรียกตอน render (รูปแบบเดียวกับโค้ดเดิม)
     timerRef.current = window.setTimeout(() => {
       if (streamGen.current !== gen) return;
-      patchBot(botId, { thinking: false, text: "", streaming: true });
       tickAnswer(performance.now());
-    }, THINK_MS);
+    }, 0);
   }
 
   return (
@@ -277,7 +401,7 @@ export function PlanChatWidget({ hints }: PlanChatWidgetProps) {
               <h2 id={titleId} className="text-sm font-bold">
                 ผู้ช่วยแผนส่งต่อ
               </h2>
-              <p className="text-[10px] text-white/70">ทดลองใช้ · ยังไม่เชื่อมโมเดล</p>
+              <p className="text-[10px] text-white/70">ตอบจากคลังกฎหมาย · อ้างอิงระดับมาตรา</p>
             </div>
             <button
               type="button"
@@ -360,10 +484,52 @@ export function PlanChatWidget({ hints }: PlanChatWidgetProps) {
                     {msg.text}
                   </p>
                 ) : msg.thinking ? (
-                  <ThoughtPanel />
+                  <ThoughtPanel steps={msg.steps} />
                 ) : (
                   <div className="max-w-[90%] rounded-2xl rounded-bl-md bg-white px-3 py-2 shadow-sm ring-1 ring-slate-100">
+                    {msg.steps?.length ? (
+                      <details className="mb-1.5">
+                        <summary className="cursor-pointer text-[10px] font-semibold text-slate-400">
+                          ขั้นตอนที่ใช้ ({msg.steps.length})
+                        </summary>
+                        <StepList steps={msg.steps} />
+                      </details>
+                    ) : null}
                     <ChatMarkdown text={msg.text} />
+                    {msg.error ? (
+                      <p className="mt-1.5 text-[10px] font-semibold text-red-600">
+                        เรียกผู้ช่วยไม่สำเร็จ
+                      </p>
+                    ) : null}
+                    {SHOW_CITATIONS && msg.anchors?.length ? (
+                      <div className="mt-2 border-t border-slate-100 pt-1.5">
+                        <p className="text-[10px] font-semibold text-slate-400">
+                          มาตราที่อ้าง
+                        </p>
+                        <ul className="mt-0.5 space-y-0.5">
+                          {msg.anchors.map((anchor) => (
+                            <li
+                              key={anchor}
+                              className="font-mono text-[10px] break-all text-slate-500"
+                            >
+                              {anchor}
+                            </li>
+                          ))}
+                        </ul>
+                        {msg.fetchedAt?.length ? (
+                          <p className="mt-1 text-[10px] text-slate-400">
+                            ข้อมูล ณ{" "}
+                            {msg.fetchedAt
+                              .map((stamp) => stamp.slice(0, 10))
+                              .join(" · ")}
+                          </p>
+                        ) : null}
+                      </div>
+                    ) : msg.refused && !msg.streaming ? (
+                      <p className="mt-1.5 text-[10px] text-slate-400">
+                        ไม่มีตัวบทในคลังที่ตอบคำถามนี้ได้
+                      </p>
+                    ) : null}
                   </div>
                 )}
               </div>
@@ -398,14 +564,26 @@ export function PlanChatWidget({ hints }: PlanChatWidgetProps) {
                 placeholder="พิมพ์คำถาม..."
                 className="min-w-0 flex-1 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-700 outline-none placeholder:text-slate-400 focus:border-mint-brand focus:bg-white"
               />
-              <button
-                type="submit"
-                disabled={!draft.trim() || streaming}
-                className="inline-flex h-8 w-8 items-center justify-center rounded-xl bg-mint-brand text-white transition hover:bg-mint-brandDark disabled:opacity-40"
-                aria-label="ส่งข้อความ"
-              >
-                <Send className="h-3.5 w-3.5" />
-              </button>
+              {streaming ? (
+                <button
+                  type="button"
+                  onClick={stopStream}
+                  className="inline-flex h-8 w-8 items-center justify-center rounded-xl bg-slate-200 text-slate-600 transition hover:bg-slate-300"
+                  aria-label="หยุดรอคำตอบ"
+                  title="หยุด"
+                >
+                  <Square className="h-3 w-3" />
+                </button>
+              ) : (
+                <button
+                  type="submit"
+                  disabled={!draft.trim()}
+                  className="inline-flex h-8 w-8 items-center justify-center rounded-xl bg-mint-brand text-white transition hover:bg-mint-brandDark disabled:opacity-40"
+                  aria-label="ส่งข้อความ"
+                >
+                  <Send className="h-3.5 w-3.5" />
+                </button>
+              )}
             </form>
           </div>
         </section>
