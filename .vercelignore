@@ -1,0 +1,6 @@
+.cursor
+.doc
+doc
+*.docx
+*.xlsx
+.DS_Store

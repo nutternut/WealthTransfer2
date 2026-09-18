@@ -1,0 +1,36 @@
+---
+description: Database tables must use wealth_ prefix only
+alwaysApply: true
+---
+
+# Database table naming
+
+ทุก table ในฐานข้อมูล (Supabase/Postgres) **ต้องขึ้นต้นด้วย `wealth_` เท่านั้น**
+
+## Rules
+
+- ชื่อ table ใหม่ทั้งหมดต้องมี prefix `wealth_`
+- อ้างอิง table ใน SQL, RPC, migration, และ client queries ต้องใช้ชื่อที่ขึ้นต้น `wealth_`
+- ห้ามสร้างหรืออ้างอิง table ที่ไม่มี prefix `wealth_` ใน schema ของโปรเจกต์นี้
+
+## Examples
+
+```sql
+-- ❌ BAD
+CREATE TABLE members (...);
+CREATE TABLE assets (...);
+FROM users
+
+-- ✅ GOOD
+CREATE TABLE wealth_members (...);
+CREATE TABLE wealth_assets (...);
+FROM wealth_users
+```
+
+```ts
+// ❌ BAD
+supabase.from("members")
+
+// ✅ GOOD
+supabase.from("wealth_members")
+```

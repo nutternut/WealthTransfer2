@@ -1,0 +1,815 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>System Overview Dashboard - Mint Minimal</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Chart.js for beautiful charts -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Lucide Icons for clean minimal icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        mint: {
+                            50: '#f0fdf4',
+                            100: '#dcfce7',
+                            200: '#bbf7d0',
+                            300: '#86efac',
+                            400: '#4ade80',
+                            500: '#22c55e', // Base green
+                            600: '#16a34a',
+                            brand: '#3EB489', // Beautiful Mint Green
+                            brandLight: '#E8F7F2',
+                            brandDark: '#2C8564',
+                            neutralDark: '#1E293B',
+                            neutralLight: '#F8FAFC'
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'Sarabun', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Sarabun:wght@300;400;500;600;700&display=swap');
+        body {
+            font-family: 'Inter', 'Sarabun', sans-serif;
+            background-color: #F8FAFC;
+        }
+        /* Custom scrollbar for minimalist look */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #E2E8F0;
+            border-radius: 3px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #CBD5E1;
+        }
+    </style>
+</head>
+<body class="text-slate-800 antialiased min-h-screen flex flex-col md:flex-row">
+
+    <!-- Sidebar Backdrop for Mobile -->
+    <div id="sidebarBackdrop" onclick="toggleSidebar()" class="fixed inset-0 bg-slate-900/40 backdrop-blur-xs z-40 hidden md:hidden"></div>
+
+    <!-- Sidebar Left Navigation Container -->
+    <aside id="sidebar" class="fixed inset-y-0 left-0 z-50 w-64 bg-white border-r border-slate-100 flex flex-col transform -translate-x-full md:translate-x-0 transition-transform duration-300 ease-in-out">
+        <!-- Brand Logo & Header -->
+        <div class="h-16 px-6 flex items-center justify-between border-b border-slate-50 flex-shrink-0">
+            <div class="flex items-center space-x-3">
+                <div class="w-9 h-9 rounded-xl bg-mint-brandLight flex items-center justify-center text-mint-brand">
+                    <i data-lucide="activity" class="w-5 h-5"></i>
+                </div>
+                <div>
+                    <span class="font-bold text-base tracking-tight text-mint-neutralDark">MINT</span>
+                    <span class="text-mint-brand font-medium text-[10px] px-1.5 py-0.5 rounded-md bg-mint-brandLight ml-1.5">CORE</span>
+                </div>
+            </div>
+            <!-- Close Sidebar button for Mobile only -->
+            <button onclick="toggleSidebar()" class="p-1 rounded-lg hover:bg-slate-50 text-slate-400 hover:text-slate-600 md:hidden">
+                <i data-lucide="x" class="w-5 h-5"></i>
+            </button>
+        </div>
+
+        <!-- Sidebar Navigation List (Scrollable Scrollbar hidden) -->
+        <div class="flex-grow overflow-y-auto px-4 py-6 space-y-6">
+            <!-- Group 1: Overview & Monitoring -->
+            <div class="space-y-1.5">
+                <h4 class="px-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider">การตรวจสอบภาพรวม</h4>
+                <div class="space-y-1">
+                    <a href="#" class="flex items-center space-x-3 px-3 py-2.5 rounded-xl text-xs font-semibold bg-mint-brandLight text-mint-brand transition-all duration-150">
+                        <i data-lucide="layout-dashboard" class="w-4 h-4"></i>
+                        <span>ภาพรวมระบบ</span>
+                    </a>
+                    <a href="#" onclick="showToast('info', 'กำลังไปที่หน้ารายงานสถิติเซิร์ฟเวอร์')" class="flex items-center space-x-3 px-3 py-2.5 rounded-xl text-xs font-medium text-slate-500 hover:text-slate-900 hover:bg-slate-50/80 transition-all duration-150">
+                        <i data-lucide="bar-chart-3" class="w-4 h-4"></i>
+                        <span>ประสิทธิภาพเซิร์ฟเวอร์</span>
+                    </a>
+                    <a href="#" onclick="showToast('info', 'กำลังไปที่หน้าประวัติกิจกรรม')" class="flex items-center space-x-3 px-3 py-2.5 rounded-xl text-xs font-medium text-slate-500 hover:text-slate-900 hover:bg-slate-50/80 transition-all duration-150">
+                        <i data-lucide="history" class="w-4 h-4"></i>
+                        <span>ล็อกและประวัติการทำงาน</span>
+                    </a>
+                </div>
+            </div>
+
+            <!-- Group 2: User & Access Management -->
+            <div class="space-y-1.5">
+                <h4 class="px-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider">ระบบจัดการสมาชิก</h4>
+                <div class="space-y-1">
+                    <a href="#" onclick="showToast('info', 'กำลังเปิดฐานข้อมูลสมาชิก')" class="flex items-center space-x-3 px-3 py-2.5 rounded-xl text-xs font-medium text-slate-500 hover:text-slate-900 hover:bg-slate-50/80 transition-all duration-150">
+                        <i data-lucide="users-2" class="w-4 h-4"></i>
+                        <span>รายชื่อผู้ใช้งานทั้งหมด</span>
+                    </a>
+                    <a href="#" onclick="showToast('info', 'กำลังเข้าสู่เมนูกำหนดสิทธิ์')" class="flex items-center space-x-3 px-3 py-2.5 rounded-xl text-xs font-medium text-slate-500 hover:text-slate-900 hover:bg-slate-50/80 transition-all duration-150">
+                        <i data-lucide="fingerprint" class="w-4 h-4"></i>
+                        <span>สิทธิ์การเข้าถึง (Roles)</span>
+                    </a>
+                </div>
+            </div>
+
+            <!-- Group 3: Server Configurations & DB -->
+            <div class="space-y-1.5">
+                <h4 class="px-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider">ฐานข้อมูล & ระบบหลังบ้าน</h4>
+                <div class="space-y-1">
+                    <a href="#" onclick="showToast('info', 'เชื่อมต่อข้อมูลคลาวด์และพื้นที่เก็บไฟล์')" class="flex items-center space-x-3 px-3 py-2.5 rounded-xl text-xs font-medium text-slate-500 hover:text-slate-900 hover:bg-slate-50/80 transition-all duration-150">
+                        <i data-lucide="cloud" class="w-4 h-4"></i>
+                        <span>คลาวด์และพื้นที่เก็บข้อมูล</span>
+                    </a>
+                    <a href="#" onclick="showToast('info', 'ฟังก์ชันการสแกนความปลอดภัยเซิร์ฟเวอร์')" class="flex items-center space-x-3 px-3 py-2.5 rounded-xl text-xs font-medium text-slate-500 hover:text-slate-900 hover:bg-slate-50/80 transition-all duration-150">
+                        <i data-lucide="shield-check" class="w-4 h-4"></i>
+                        <span>ระบบรักษาความปลอดภัย</span>
+                    </a>
+                </div>
+            </div>
+
+            <!-- Group 4: Settings -->
+            <div class="space-y-1.5">
+                <h4 class="px-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider">ตั้งค่าระบบ</h4>
+                <div class="space-y-1">
+                    <a href="#" onclick="showToast('info', 'ระบบตั้งค่าการใช้งานโปรแกรม')" class="flex items-center space-x-3 px-3 py-2.5 rounded-xl text-xs font-medium text-slate-500 hover:text-slate-900 hover:bg-slate-50/80 transition-all duration-150">
+                        <i data-lucide="sliders-horizontal" class="w-4 h-4"></i>
+                        <span>การตั้งค่าคอนฟิกูเรชัน</span>
+                    </a>
+                    <a href="#" onclick="showToast('info', 'หน้าต่างการเชื่อมต่อ API เอกสาร')" class="flex items-center space-x-3 px-3 py-2.5 rounded-xl text-xs font-medium text-slate-500 hover:text-slate-900 hover:bg-slate-50/80 transition-all duration-150">
+                        <i data-lucide="webhook" class="w-4 h-4"></i>
+                        <span>ตั้งค่า API Webhooks</span>
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sidebar Bottom Profile Section (Desktop) -->
+        <div class="p-4 border-t border-slate-50 flex items-center space-x-3 flex-shrink-0">
+            <div class="w-9 h-9 rounded-xl bg-mint-brand text-white flex items-center justify-center font-semibold text-xs">
+                AD
+            </div>
+            <div class="flex-grow min-w-0">
+                <div class="text-xs font-semibold text-slate-700 truncate">สมชาย ยอดเยี่ยม</div>
+                <div class="text-[10px] text-slate-400 truncate">System Admin</div>
+            </div>
+            <button onclick="showToast('warning', 'ออกจากระบบเรียบร้อย')" class="p-1.5 rounded-lg text-slate-400 hover:text-rose-500 hover:bg-rose-50 transition-colors">
+                <i data-lucide="log-out" class="w-4 h-4"></i>
+            </button>
+        </div>
+    </aside>
+
+    <!-- Content Wrapper (Offsets the left fixed sidebar on desktop) -->
+    <div class="flex-grow flex flex-col min-w-0 md:pl-64">
+
+        <!-- Top Header for Desktop & Mobile -->
+        <header class="bg-white border-b border-slate-100 sticky top-0 z-30">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="flex justify-between h-16 items-center">
+                    
+                    <!-- Mobile Hamburger Menu Button (Shows only on Mobile) -->
+                    <div class="flex items-center space-x-3 md:hidden">
+                        <button onclick="toggleSidebar()" class="p-2 -ml-2 text-slate-500 hover:text-slate-700 hover:bg-slate-50 rounded-lg transition-colors">
+                            <i data-lucide="menu" class="w-6 h-6"></i>
+                        </button>
+                        <div class="flex items-center space-x-2">
+                            <div class="w-8 h-8 rounded-lg bg-mint-brandLight flex items-center justify-center text-mint-brand">
+                                <i data-lucide="activity" class="w-4.5 h-4.5"></i>
+                            </div>
+                            <span class="font-bold text-sm tracking-tight text-mint-neutralDark">MINT</span>
+                        </div>
+                    </div>
+
+                    <!-- Desktop Navigation Greeting / Breadcrumb (Desktop Only) -->
+                    <div class="hidden md:flex items-center space-x-2 text-xs text-slate-400 font-medium">
+                        <a href="#" class="hover:text-slate-600">แดชบอร์ดระบบ</a>
+                        <span>/</span>
+                        <span class="text-mint-brand font-semibold">ภาพรวมการใช้งาน</span>
+                    </div>
+
+                    <!-- Right Side Actions -->
+                    <div class="flex items-center space-x-4">
+                        <!-- Notifications -->
+                        <button class="relative p-2 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-50 transition-colors" onclick="showToast('info', 'ไม่มีการแจ้งเตือนใหม่ในขณะนี้')">
+                            <i data-lucide="bell" class="w-5 h-5"></i>
+                            <span class="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full"></span>
+                        </button>
+                        
+                        <!-- Simple Profile Quick Access -->
+                        <div class="flex items-center space-x-2 text-xs">
+                            <span class="hidden sm:inline-block font-semibold text-slate-600">ผู้ดูแลระบบทั่วไป</span>
+                            <span class="w-1.5 h-1.5 bg-emerald-500 rounded-full"></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Content Container -->
+        <main class="flex-grow max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <!-- Charts Section (Grid) -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
+            <!-- Usage Trend Chart (2/3 columns) -->
+            <div class="bg-white p-6 rounded-2xl border border-slate-100 lg:col-span-2">
+                <div class="flex justify-between items-center mb-6">
+                    <div>
+                        <h2 class="text-lg font-bold text-slate-900">แนวโน้มการใช้งานระบบวันนี้</h2>
+                        <p class="text-xs text-slate-400 mt-0.5">สถิติปริมาณทราฟฟิกของผู้ใช้งานรายชั่วโมง</p>
+                    </div>
+                    <div class="flex bg-slate-50 p-1 rounded-lg border border-slate-100">
+                        <button class="px-3 py-1 text-xs font-semibold bg-white text-slate-700 rounded-md shadow-sm">วันนี้</button>
+                        <button onclick="showToast('warning', 'ฟังก์ชันรายงานย้อนหลังยังไม่เปิดให้บริการในเวอร์ชันทดลอง')" class="px-3 py-1 text-xs font-medium text-slate-400 hover:text-slate-600 rounded-md">7 วันล่าสุด</button>
+                    </div>
+                </div>
+                <!-- Line Chart Container -->
+                <div class="h-80 w-full relative">
+                    <canvas id="usageTrendChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Distribution Chart (1/3 columns) -->
+            <div class="bg-white p-6 rounded-2xl border border-slate-100 flex flex-col justify-between">
+                <div>
+                    <h2 class="text-lg font-bold text-slate-900 mb-1">สัดส่วนประเภทผู้ใช้งาน</h2>
+                    <p class="text-xs text-slate-400 mb-6">แบ่งตามระดับสิทธิ์การเข้าถึงระบบ</p>
+                    <!-- Doughnut Chart Container -->
+                    <div class="h-56 relative flex items-center justify-center">
+                        <canvas id="userDistChart"></canvas>
+                    </div>
+                </div>
+                
+                <!-- Chart Legend Details -->
+                <div class="grid grid-cols-3 gap-2 pt-4 border-t border-slate-50 mt-4 text-center">
+                    <div>
+                        <div class="text-[10px] text-slate-400 font-medium uppercase">Admin</div>
+                        <div class="text-sm font-semibold text-slate-800">10%</div>
+                    </div>
+                    <div>
+                        <div class="text-[10px] text-slate-400 font-medium uppercase">Staff</div>
+                        <div class="text-sm font-semibold text-slate-800">30%</div>
+                    </div>
+                    <div>
+                        <div class="text-[10px] text-slate-400 font-medium uppercase">Member</div>
+                        <div class="text-sm font-semibold text-slate-800 font-semibold text-mint-brand">60%</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Recent Activities Table & UI Component Showcase -->
+        <div class="bg-white rounded-2xl border border-slate-100 overflow-hidden mb-8">
+            <!-- Table Header -->
+            <div class="p-6 border-b border-slate-50 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                <div>
+                    <h2 class="text-lg font-bold text-slate-900">บันทึกกิจกรรมล่าสุดในระบบ</h2>
+                    <p class="text-xs text-slate-400 mt-0.5">การทำรายการหรือตรวจพบล่าสุดในระบบเซิร์ฟเวอร์</p>
+                </div>
+                <!-- Search and Filter in Minimal Style -->
+                <div class="flex w-full sm:w-auto items-center space-x-2">
+                    <div class="relative flex-grow sm:flex-grow-0">
+                        <input type="text" id="searchInput" onkeyup="filterActivities()" placeholder="ค้นหากิจกรรม..." class="w-full sm:w-64 pl-9 pr-4 py-2 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-mint-200 focus:border-mint-brand transition-all">
+                        <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute left-3 top-2.5"></i>
+                    </div>
+                    <select id="statusFilter" onchange="filterActivities()" class="border border-slate-200 rounded-xl py-2 px-3 text-xs text-slate-600 focus:outline-none focus:ring-2 focus:ring-mint-200 focus:border-mint-brand bg-white">
+                        <option value="all">ทุกสถานะ</option>
+                        <option value="success">Success</option>
+                        <option value="warning">Warning</option>
+                        <option value="error">Error</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Table Responsive Container -->
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse" id="activitiesTable">
+                    <thead>
+                        <tr class="bg-slate-50 border-b border-slate-100 text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
+                            <th class="py-3 px-6">ผู้ทำรายการ</th>
+                            <th class="py-3 px-6">รายละเอียดกิจกรรม</th>
+                            <th class="py-3 px-6">ที่อยู่ IP</th>
+                            <th class="py-3 px-6">เวลา</th>
+                            <th class="py-3 px-6 text-center">สถานะ</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-50 text-xs">
+                        <!-- Row 1 -->
+                        <tr class="hover:bg-slate-50/50 transition-colors duration-150">
+                            <td class="py-4 px-6 flex items-center space-x-3">
+                                <div class="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center font-medium text-slate-600">นส</div>
+                                <div>
+                                    <div class="font-semibold text-slate-800">นพพล สิทธิกุล</div>
+                                    <div class="text-[10px] text-slate-400">Developer</div>
+                                </div>
+                            </td>
+                            <td class="py-4 px-6 font-medium text-slate-700">อัปเดตโค้ดเวอร์ชัน v2.4.1 ขึ้น Production server</td>
+                            <td class="py-4 px-6 text-slate-500 font-mono">192.168.1.104</td>
+                            <td class="py-4 px-6 text-slate-400">10 นาทีที่แล้ว</td>
+                            <td class="py-4 px-6 text-center">
+                                <span class="px-2.5 py-1 inline-flex text-[10px] leading-5 font-semibold rounded-full bg-emerald-50 text-emerald-700 border border-emerald-100">Success</span>
+                            </td>
+                        </tr>
+                        <!-- Row 2 -->
+                        <tr class="hover:bg-slate-50/50 transition-colors duration-150">
+                            <td class="py-4 px-6 flex items-center space-x-3">
+                                <div class="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center font-medium text-slate-600">วร</div>
+                                <div>
+                                    <div class="font-semibold text-slate-800">วราภรณ์ รักเรียน</div>
+                                    <div class="text-[10px] text-slate-400">Content Creator</div>
+                                </div>
+                            </td>
+                            <td class="py-4 px-6 font-medium text-slate-700">พยายามอัปโหลดไฟล์ภาพขนาดใหญ่เกิน 20MB</td>
+                            <td class="py-4 px-6 text-slate-500 font-mono">172.16.254.1</td>
+                            <td class="py-4 px-6 text-slate-400">25 นาทีที่แล้ว</td>
+                            <td class="py-4 px-6 text-center">
+                                <span class="px-2.5 py-1 inline-flex text-[10px] leading-5 font-semibold rounded-full bg-amber-50 text-amber-700 border border-amber-100">Warning</span>
+                            </td>
+                        </tr>
+                        <!-- Row 3 -->
+                        <tr class="hover:bg-slate-50/50 transition-colors duration-150">
+                            <td class="py-4 px-6 flex items-center space-x-3">
+                                <div class="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center font-medium text-slate-600">บส</div>
+                                <div>
+                                    <div class="font-semibold text-slate-800">Bot Service</div>
+                                    <div class="text-[10px] text-slate-400">Automated Bot</div>
+                                </div>
+                            </td>
+                            <td class="py-4 px-6 font-medium text-slate-700">ตรวจพบการดึงข้อมูลจาก API ถี่เกินกำหนด (Rate Limit Exceeded)</td>
+                            <td class="py-4 px-6 text-slate-500 font-mono">203.0.113.19</td>
+                            <td class="py-4 px-6 text-slate-400">42 นาทีที่แล้ว</td>
+                            <td class="py-4 px-6 text-center">
+                                <span class="px-2.5 py-1 inline-flex text-[10px] leading-5 font-semibold rounded-full bg-rose-50 text-rose-700 border border-rose-100">Error</span>
+                            </td>
+                        </tr>
+                        <!-- Row 4 -->
+                        <tr class="hover:bg-slate-50/50 transition-colors duration-150">
+                            <td class="py-4 px-6 flex items-center space-x-3">
+                                <div class="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center font-medium text-slate-600">กพ</div>
+                                <div>
+                                    <div class="font-semibold text-slate-800">กิตติพงษ์ ใจงาม</div>
+                                    <div class="text-[10px] text-slate-400">Staff</div>
+                                </div>
+                            </td>
+                            <td class="py-4 px-6 font-medium text-slate-700">สร้างรายงานสรุปผลการใช้งานประจำเดือนมกราคม</td>
+                            <td class="py-4 px-6 text-slate-500 font-mono">192.168.1.15</td>
+                            <td class="py-4 px-6 text-slate-400">1 ชั่วโมงที่แล้ว</td>
+                            <td class="py-4 px-6 text-center">
+                                <span class="px-2.5 py-1 inline-flex text-[10px] leading-5 font-semibold rounded-full bg-emerald-50 text-emerald-700 border border-emerald-100">Success</span>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Table Footer Pagination -->
+            <div class="p-4 bg-slate-50/50 border-t border-slate-50 flex flex-col sm:flex-row justify-between items-center text-xs gap-3">
+                <span class="text-slate-500">แสดงผล 1 ถึง 4 จากทั้งหมด 4 รายการ</span>
+                <div class="flex space-x-1">
+                    <button class="px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white text-slate-400 hover:text-slate-600 cursor-not-allowed" disabled>ก่อนหน้า</button>
+                    <button class="px-3 py-1.5 rounded-lg border border-mint-200 bg-mint-brandLight text-mint-brand font-semibold">1</button>
+                    <button class="px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white text-slate-500 hover:text-slate-700" onclick="showToast('info', 'ฟังก์ชันเปลี่ยนหน้ายังไม่ได้พัฒนารองรับข้อมูลจริง')">ถัดไป</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Demonstration Block for testing Modals & Toast manually -->
+        <div class="bg-white p-6 rounded-2xl border border-slate-100 mb-8">
+            <h3 class="text-sm font-bold text-slate-900 mb-2 flex items-center space-x-2">
+                <i data-lucide="cog" class="w-4 h-4 text-mint-brand"></i>
+                <span>แผงทดสอบ UI Components (Modal & Toast Demo)</span>
+            </h3>
+            <p class="text-xs text-slate-500 mb-4">ทดลองคลิกปุ่มด้านล่างเพื่อแสดง Toast แจ้งเตือนประเภทต่างๆ หรือใช้ควบคุม Modal ป๊อปอัปภายนอก</p>
+            <div class="flex flex-wrap gap-2.5">
+                <button onclick="showToast('success', 'บันทึกข้อมูลและส่งอีเมลเรียบร้อยแล้ว!')" class="px-3.5 py-2 bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100/70 transition rounded-xl text-xs font-semibold flex items-center space-x-1.5">
+                    <span class="w-1.5 h-1.5 bg-emerald-500 rounded-full"></span>
+                    <span>Toast Success</span>
+                </button>
+                <button onclick="showToast('warning', 'กรุณาตรวจสอบสิทธิ์การอัปเดตให้เรียบร้อยก่อนเซฟ')" class="px-3.5 py-2 bg-amber-50 text-amber-700 border border-amber-200 hover:bg-amber-100/70 transition rounded-xl text-xs font-semibold flex items-center space-x-1.5">
+                    <span class="w-1.5 h-1.5 bg-amber-500 rounded-full"></span>
+                    <span>Toast Warning</span>
+                </button>
+                <button onclick="showToast('error', 'เซิร์ฟเวอร์ตอบกลับล้มเหลว (Error 500)')" class="px-3.5 py-2 bg-rose-50 text-rose-700 border border-rose-200 hover:bg-rose-100/70 transition rounded-xl text-xs font-semibold flex items-center space-x-1.5">
+                    <span class="w-1.5 h-1.5 bg-rose-500 rounded-full"></span>
+                    <span>Toast Error</span>
+                </button>
+                <button onclick="showToast('info', 'มีอัปเดตระบบเวลา 23.00 น. คืนนี้')" class="px-3.5 py-2 bg-blue-50 text-blue-700 border border-blue-200 hover:bg-blue-100/70 transition rounded-xl text-xs font-semibold flex items-center space-x-1.5">
+                    <span class="w-1.5 h-1.5 bg-blue-500 rounded-full"></span>
+                    <span>Toast Info</span>
+                </button>
+                <button onclick="openModal()" class="px-3.5 py-2 bg-slate-100 text-slate-700 hover:bg-slate-200 transition rounded-xl text-xs font-semibold flex items-center space-x-1.5">
+                    <i data-lucide="eye" class="w-3.5 h-3.5"></i>
+                    <span>เปิด Modal ป๊อปอัป</span>
+                </button>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Global Footer -->
+    <footer class="bg-white border-t border-slate-100 py-6 mt-auto">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row justify-between items-center text-xs text-slate-400 gap-3">
+            <div>© 2026 MintCore System Dashboard. พัฒนาด้วยความประณีต</div>
+            <div class="flex space-x-4">
+                <a href="#" class="hover:text-slate-600">นโยบายความเป็นส่วนตัว</a>
+                <a href="#" class="hover:text-slate-600">ข้อตกลงการใช้งาน</a>
+                <a href="#" class="hover:text-slate-600">ช่วยเหลือ & ติดต่อ</a>
+            </div>
+        </div>
+    </footer>
+
+    <!-- MODAL POPUP: Add New User -->
+    <div id="addUserModal" class="fixed inset-0 z-50 overflow-y-auto hidden" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+        <!-- Backdrop Backdrop with smooth glass effect -->
+        <div class="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
+            <div class="fixed inset-0 transition-opacity bg-slate-900/40 backdrop-blur-sm" onclick="closeModal()"></div>
+
+            <!-- This element is to trick the browser into centering the modal contents. -->
+            <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+
+            <!-- Modal Content Wrapper -->
+            <div class="inline-block align-bottom bg-white rounded-2xl text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full border border-slate-100">
+                
+                <!-- Modal Head Section -->
+                <div class="bg-mint-brandLight px-6 py-4 flex justify-between items-center border-b border-mint-100">
+                    <div class="flex items-center space-x-2.5 text-mint-brandDark">
+                        <div class="w-8 h-8 rounded-lg bg-white flex items-center justify-center shadow-sm">
+                            <i data-lucide="user-plus" class="w-4 h-4 text-mint-brand"></i>
+                        </div>
+                        <h3 class="text-sm font-bold" id="modal-title">เพิ่มผู้ใช้งานระบบคนใหม่</h3>
+                    </div>
+                    <button onclick="closeModal()" class="text-slate-400 hover:text-slate-600 transition p-1 rounded-lg hover:bg-white">
+                        <i data-lucide="x" class="w-5 h-5"></i>
+                    </button>
+                </div>
+
+                <!-- Modal Body Form -->
+                <form id="addUserForm" onsubmit="handleFormSubmit(event)" class="px-6 py-5 space-y-4">
+                    <div class="grid grid-cols-2 gap-4">
+                        <!-- First Name -->
+                        <div class="space-y-1.5">
+                            <label class="block text-xs font-semibold text-slate-500">ชื่อจริง *</label>
+                            <input type="text" required name="firstName" placeholder="เช่น นพพล" class="w-full px-3.5 py-2 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-mint-200 focus:border-mint-brand transition-all">
+                        </div>
+                        <!-- Last Name -->
+                        <div class="space-y-1.5">
+                            <label class="block text-xs font-semibold text-slate-500">นามสกุล *</label>
+                            <input type="text" required name="lastName" placeholder="เช่น สิทธิกุล" class="w-full px-3.5 py-2 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-mint-200 focus:border-mint-brand transition-all">
+                        </div>
+                    </div>
+
+                    <!-- Email Address -->
+                    <div class="space-y-1.5">
+                        <label class="block text-xs font-semibold text-slate-500">อีเมลใช้งาน *</label>
+                        <input type="email" required name="email" placeholder="example@mintcore.com" class="w-full px-3.5 py-2 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-mint-200 focus:border-mint-brand transition-all">
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-4">
+                        <!-- Role Selection -->
+                        <div class="space-y-1.5">
+                            <label class="block text-xs font-semibold text-slate-500">บทบาทสิทธิ์ *</label>
+                            <select name="role" class="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-mint-200 focus:border-mint-brand transition-all bg-white">
+                                <option value="Member">Member (ทั่วไป)</option>
+                                <option value="Staff">Staff (ทีมงาน)</option>
+                                <option value="Developer">Developer (ผู้พัฒนา)</option>
+                                <option value="Admin">Admin (ผู้จัดการ)</option>
+                            </select>
+                        </div>
+                        <!-- IP Address Optional -->
+                        <div class="space-y-1.5">
+                            <label class="block text-xs font-semibold text-slate-500">ระบุ IP เฉพาะเจาะจง</label>
+                            <input type="text" name="ipAddress" placeholder="192.168.1.1 (ไม่จำเป็น)" class="w-full px-3.5 py-2 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-mint-200 focus:border-mint-brand transition-all">
+                        </div>
+                    </div>
+
+                    <!-- Information alert inside modal -->
+                    <div class="p-3 bg-slate-50 border border-slate-100 rounded-xl flex items-start space-x-2 text-[11px] text-slate-500">
+                        <i data-lucide="info" class="w-4 h-4 text-slate-400 mt-0.5 flex-shrink-0"></i>
+                        <span>รหัสผ่านเริ่มต้นสำหรับการล็อกอินครั้งแรกจะถูกสุ่มและส่งไปยังอีเมลที่กำหนดโดยอัตโนมัติ</span>
+                    </div>
+
+                    <!-- Modal Action Buttons Footer -->
+                    <div class="pt-4 border-t border-slate-100 flex justify-end space-x-2">
+                        <button type="button" onclick="closeModal()" class="px-4 py-2 border border-slate-200 text-slate-600 rounded-xl text-xs font-semibold hover:bg-slate-50 active:scale-95 transition">ยกเลิก</button>
+                        <button type="submit" class="px-5 py-2 bg-mint-brand text-white rounded-xl text-xs font-semibold hover:bg-mint-brandDark active:scale-95 transition shadow-sm shadow-mint-100">บันทึกเพิ่มผู้ใช้งาน</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- TOAST NOTIFICATIONS CONTAINER -->
+    <div id="toastContainer" class="fixed bottom-5 right-5 z-50 flex flex-col gap-3 max-w-sm w-full pointer-events-none">
+        <!-- Toast elements will be appended here via Javascript dynamically -->
+    </div>
+
+
+    <!-- JAVASCRIPT LOGIC -->
+    <script>
+        // Init Lucide Icons
+        lucide.createIcons();
+
+        // DOM elements
+        const addUserModal = document.getElementById('addUserModal');
+        const addUserForm = document.getElementById('addUserForm');
+        const toastContainer = document.getElementById('toastContainer');
+        const sidebar = document.getElementById('sidebar');
+        const sidebarBackdrop = document.getElementById('sidebarBackdrop');
+
+        /* -----------------------------------------------------
+         * STREAMING_CHUNK: Adding layout toggle scripts...
+         * ----------------------------------------------------- */
+
+        /**
+         * Toggle Mobile Sidebar drawer visibility.
+         */
+        function toggleSidebar() {
+            if (sidebar.classList.contains('-translate-x-full')) {
+                sidebar.classList.remove('-translate-x-full');
+                sidebarBackdrop.classList.remove('hidden');
+            } else {
+                sidebar.classList.add('-translate-x-full');
+                sidebarBackdrop.classList.add('hidden');
+            }
+        }
+
+        /* -----------------------------------------------------
+         * CHARTS IMPLEMENTATION (Chart.js)
+         * ----------------------------------------------------- */
+
+        // Usage Trend Line Chart
+        const trendCtx = document.getElementById('usageTrendChart').getContext('2d');
+        const gradientMint = trendCtx.createLinearGradient(0, 0, 0, 300);
+        gradientMint.addColorStop(0, 'rgba(62, 180, 137, 0.25)'); // Brand Mint Green
+        gradientMint.addColorStop(1, 'rgba(62, 180, 137, 0.0)');
+
+        const usageTrendChart = new Chart(trendCtx, {
+            type: 'line',
+            data: {
+                labels: ['08:00', '10:00', '12:00', '14:00', '16:00', '18:00', '20:00', '22:00'],
+                datasets: [{
+                    label: 'Active Users',
+                    data: [420, 680, 1100, 950, 1020, 1248, 890, 620],
+                    borderColor: '#3EB489',
+                    borderWidth: 2,
+                    pointBackgroundColor: '#FFFFFF',
+                    pointBorderColor: '#3EB489',
+                    pointBorderWidth: 2,
+                    pointRadius: 4,
+                    pointHoverRadius: 6,
+                    fill: true,
+                    backgroundColor: gradientMint,
+                    tension: 0.35 // Curved lines
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false // We use our own header labels
+                    },
+                    tooltip: {
+                        backgroundColor: '#1E293B',
+                        titleFont: { family: 'Sarabun', size: 11 },
+                        bodyFont: { family: 'Sarabun', size: 11 },
+                        padding: 10,
+                        cornerRadius: 8,
+                        displayColors: false
+                    }
+                },
+                scales: {
+                    x: {
+                        grid: {
+                            display: false
+                        },
+                        ticks: {
+                            font: { family: 'Inter', size: 10 },
+                            color: '#94A3B8'
+                        }
+                    },
+                    y: {
+                        border: {
+                            dash: [5, 5]
+                        },
+                        grid: {
+                            color: '#F1F5F9'
+                        },
+                        ticks: {
+                            font: { family: 'Inter', size: 10 },
+                            color: '#94A3B8'
+                        }
+                    }
+                }
+            }
+        });
+
+        // User Distribution Doughnut Chart
+        const distCtx = document.getElementById('userDistChart').getContext('2d');
+        const userDistChart = new Chart(distCtx, {
+            type: 'doughnut',
+            data: {
+                labels: ['Admin', 'Staff', 'Member'],
+                datasets: [{
+                    data: [10, 30, 60],
+                    backgroundColor: [
+                        '#1E293B', // Neutral Dark
+                        '#CBD5E1', // Slate Light
+                        '#3EB489'  // Mint Green
+                    ],
+                    borderWidth: 4,
+                    borderColor: '#FFFFFF',
+                    hoverOffset: 4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                cutout: '75%', // Donut thickness
+                plugins: {
+                    legend: {
+                        display: false // Custom legend used in HTML
+                    },
+                    tooltip: {
+                        backgroundColor: '#1E293B',
+                        titleFont: { family: 'Sarabun', size: 11 },
+                        bodyFont: { family: 'Sarabun', size: 11 },
+                        padding: 10,
+                        cornerRadius: 8
+                    }
+                }
+            }
+        });
+
+
+        /* -----------------------------------------------------
+         * MODAL FUNCTIONS
+         * ----------------------------------------------------- */
+
+        function openModal() {
+            addUserModal.classList.remove('hidden');
+            // Prevent scroll on body behind modal
+            document.body.classList.add('overflow-hidden');
+        }
+
+        function closeModal() {
+            addUserModal.classList.add('hidden');
+            document.body.classList.remove('overflow-hidden');
+            addUserForm.reset();
+        }
+
+        function handleFormSubmit(event) {
+            event.preventDefault();
+            const formData = new FormData(addUserForm);
+            
+            // Extract values
+            const firstName = formData.get('firstName');
+            const lastName = formData.get('lastName');
+            const email = formData.get('email');
+            const role = formData.get('role');
+            const ipAddress = formData.get('ipAddress') || '127.0.0.1';
+
+            // Insert new record into current activities table as mock
+            const tableBody = document.querySelector('#activitiesTable tbody');
+            const newRow = document.createElement('tr');
+            newRow.className = "hover:bg-slate-50/50 transition-colors duration-150";
+            
+            // Generates initials for avatar
+            const initial = firstName.substring(0, 2);
+
+            newRow.innerHTML = `
+                <td class="py-4 px-6 flex items-center space-x-3">
+                    <div class="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center font-medium text-slate-600">${initial}</div>
+                    <div>
+                        <div class="font-semibold text-slate-800">${firstName} ${lastName}</div>
+                        <div class="text-[10px] text-slate-400">${role}</div>
+                    </div>
+                </td>
+                <td class="py-4 px-6 font-medium text-slate-700">สมัครผู้ใช้งานใหม่และอนุมัติสิทธิ์เข้าสู่ระบบ</td>
+                <td class="py-4 px-6 text-slate-500 font-mono">${ipAddress}</td>
+                <td class="py-4 px-6 text-slate-400">เมื่อครู่นี้</td>
+                <td class="py-4 px-6 text-center">
+                    <span class="px-2.5 py-1 inline-flex text-[10px] leading-5 font-semibold rounded-full bg-emerald-50 text-emerald-700 border border-emerald-100">Success</span>
+                </td>
+            `;
+
+            // Insert at the top of table body
+            tableBody.insertBefore(newRow, tableBody.firstChild);
+
+            // Close modal and notify user
+            closeModal();
+            showToast('success', `เพิ่มผู้ใช้งาน "${firstName} ${lastName}" เรียบร้อยแล้ว`);
+        }
+
+
+        /* -----------------------------------------------------
+         * TOAST SYSTEM
+         * ----------------------------------------------------- */
+
+        /**
+         * Trigger a beautiful minimalist toast notification.
+         * @param {'success' | 'warning' | 'error' | 'info'} type 
+         * @param {string} message 
+         */
+        function showToast(type, message) {
+            // Check limits for too many toasts
+            if (toastContainer.children.length >= 4) {
+                toastContainer.removeChild(toastContainer.firstChild);
+            }
+
+            const toast = document.createElement('div');
+            toast.className = "flex items-center space-x-3 p-4 bg-white rounded-xl shadow-lg border border-slate-100 pointer-events-auto transform translate-y-2 opacity-0 transition-all duration-300 w-full";
+            
+            // Icon & Color definitions
+            let iconMarkup = '';
+            let borderLeftClass = '';
+
+            switch (type) {
+                case 'success':
+                    iconMarkup = `<div class="p-1.5 bg-emerald-50 text-emerald-500 rounded-lg flex-shrink-0"><i data-lucide="check-circle" class="w-4 h-4"></i></div>`;
+                    borderLeftClass = 'border-l-4 border-l-emerald-500';
+                    break;
+                case 'warning':
+                    iconMarkup = `<div class="p-1.5 bg-amber-50 text-amber-500 rounded-lg flex-shrink-0"><i data-lucide="alert-triangle" class="w-4 h-4"></i></div>`;
+                    borderLeftClass = 'border-l-4 border-l-amber-500';
+                    break;
+                case 'error':
+                    iconMarkup = `<div class="p-1.5 bg-rose-50 text-rose-500 rounded-lg flex-shrink-0"><i data-lucide="x-circle" class="w-4 h-4"></i></div>`;
+                    borderLeftClass = 'border-l-4 border-l-rose-500';
+                    break;
+                case 'info':
+                default:
+                    iconMarkup = `<div class="p-1.5 bg-mint-brandLight text-mint-brand rounded-lg flex-shrink-0"><i data-lucide="info" class="w-4 h-4"></i></div>`;
+                    borderLeftClass = 'border-l-4 border-l-mint-brand';
+                    break;
+            }
+
+            toast.innerHTML = `
+                ${iconMarkup}
+                <div class="flex-grow text-xs font-medium text-slate-700 pr-2">${message}</div>
+                <button onclick="dismissToast(this.parentElement)" class="text-slate-300 hover:text-slate-500 transition-colors flex-shrink-0">
+                    <i data-lucide="x" class="w-3.5 h-3.5"></i>
+                </button>
+            `;
+
+            toast.classList.add(...borderLeftClass.split(' '));
+
+            // Append & Trigger Animations
+            toastContainer.appendChild(toast);
+            lucide.createIcons(); // Re-trigger lucide logic for new icons
+
+            // Short timeout to play CSS entrance animation
+            setTimeout(() => {
+                toast.classList.remove('translate-y-2', 'opacity-0');
+                toast.classList.add('translate-y-0', 'opacity-100');
+            }, 10);
+
+            // Auto dismiss after 4.5s
+            setTimeout(() => {
+                dismissToast(toast);
+            }, 4500);
+        }
+
+        function dismissToast(toastElement) {
+            if (!toastElement) return;
+            toastElement.classList.remove('translate-y-0', 'opacity-100');
+            toastElement.classList.add('-translate-y-2', 'opacity-0');
+            setTimeout(() => {
+                if (toastElement.parentNode === toastContainer) {
+                    toastContainer.removeChild(toastElement);
+                }
+            }, 300);
+        }
+
+
+        /* -----------------------------------------------------
+         * TABLE SEARCH & FILTERS
+         * ----------------------------------------------------- */
+
+        function filterActivities() {
+            const searchVal = document.getElementById('searchInput').value.toLowerCase();
+            const statusVal = document.getElementById('statusFilter').value;
+            const tableRows = document.querySelectorAll('#activitiesTable tbody tr');
+
+            tableRows.forEach(row => {
+                const text = row.innerText.toLowerCase();
+                const statusBadge = row.querySelector('td:last-child span').innerText.toLowerCase();
+                
+                const matchesSearch = text.includes(searchVal);
+                const matchesStatus = (statusVal === 'all') || statusBadge.includes(statusVal);
+
+                if (matchesSearch && matchesStatus) {
+                    row.style.display = "";
+                } else {
+                    row.style.display = "none";
+                }
+            });
+        }
+    </script>
+</body>
+</html>
