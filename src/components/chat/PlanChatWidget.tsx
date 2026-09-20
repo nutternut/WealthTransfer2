@@ -29,11 +29,9 @@ const STARTER: ChatMessage[] = [
     id: "hello",
     role: "bot",
     text: [
-      "สวัสดีค่ะ นี่คือ**ผู้ช่วยกฎหมายภาษีความมั่งคั่ง**",
+      "สวัสดีค่ะ นี่คือ **FAMZ**",
       "",
       "ถามเรื่องภาษีการรับมรดก การให้ หรือการขายอสังหาฯ ได้เลย คำตอบจะยกตัวบทและบอกเลขมาตราให้",
-      "",
-      "> ตอบจากคลังกฎหมายเท่านั้น ถ้าไม่มีตัวบทจะบอกว่าตอบไม่ได้ แทนการเดา",
     ].join("\n"),
   },
 ];
@@ -407,10 +405,9 @@ export function PlanChatWidget() {
               <Sparkles className="h-4 w-4" />
             </div>
             <div className="min-w-0 flex-1">
-              <h2 id={titleId} className="text-sm font-bold">
-                ผู้ช่วยแผนส่งต่อ
+              <h2 id={titleId} className="text-sm font-bold tracking-wide">
+                FAMZ
               </h2>
-              <p className="text-[10px] text-white/70">ตอบจากคลังกฎหมาย · อ้างอิงระดับมาตรา</p>
             </div>
             <button
               type="button"
