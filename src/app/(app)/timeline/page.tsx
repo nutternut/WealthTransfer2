@@ -11,7 +11,6 @@ import { applyAggregatedPlanTaxes, type PriorLedgerSeed } from "@/lib/plan-tax";
 import { fetchTaxLedgers } from "@/lib/tax-ledgers-db";
 import { buildPlanRecommendations } from "@/lib/plan-recommendations";
 import { buildTimelineSchedule } from "@/lib/timeline-from-plan";
-import { PlanChatWidget } from "@/components/chat/PlanChatWidget";
 
 export default function TimelinePage() {
   const [plan, setPlan] = useState<PlanItem[]>([]);
@@ -143,12 +142,5 @@ export default function TimelinePage() {
     );
   }
 
-  return (
-    <>
-      {body}
-      {/* ไม่ส่งตัวเลขแผนเข้าแชทอีก: บริการรับแค่ session_id + question
-          เพื่อไม่ให้มูลค่าทรัพย์สินลูกค้าเข้า transcript (PDPA) */}
-      <PlanChatWidget />
-    </>
-  );
+  return body;
 }

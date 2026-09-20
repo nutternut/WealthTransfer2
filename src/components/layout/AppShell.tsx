@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { Navbar } from "@/components/layout/Navbar";
+import { PlanChatWidget } from "@/components/chat/PlanChatWidget";
 import { clearSessionCookie, getOwnerId, getStoredFamilyName } from "@/lib/auth";
 import { pageTitles } from "@/lib/nav";
 
@@ -67,6 +68,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </div>
         </footer>
       </div>
+      <PlanChatWidget />
     </div>
   );
 }
