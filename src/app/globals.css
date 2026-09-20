@@ -228,6 +228,16 @@ input[type="checkbox"].check {
   }
 }
 
+.chat-suggest-row {
+  scroll-snap-type: x proximity;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+
+.chat-suggest-row::-webkit-scrollbar {
+  display: none;
+}
+
 .chat-think-dots {
   display: inline-flex;
   gap: 3px;

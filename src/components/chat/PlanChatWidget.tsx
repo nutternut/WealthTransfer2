@@ -546,14 +546,14 @@ export function PlanChatWidget() {
           </div>
 
           <div className="border-t border-slate-100 bg-white px-3 py-2.5">
-            <div className="mb-2 flex flex-wrap gap-1">
+            <div className="chat-suggest-row mb-2 flex flex-nowrap gap-1 overflow-x-auto">
               {SUGGESTIONS.map((item) => (
                 <button
                   key={item}
                   type="button"
                   onClick={() => send(item)}
                   disabled={streaming}
-                  className="rounded-full bg-slate-50 px-2 py-1 text-[10px] font-medium text-slate-600 ring-1 ring-slate-200 transition hover:bg-mint-brandLight hover:text-mint-brandDark disabled:opacity-40"
+                  className="shrink-0 snap-start rounded-full bg-slate-50 px-2.5 py-1 text-[10px] font-medium whitespace-nowrap text-slate-600 ring-1 ring-slate-200 transition hover:bg-mint-brandLight hover:text-mint-brandDark disabled:opacity-40"
                 >
                   {item}
                 </button>
