@@ -208,7 +208,12 @@ export function LoginForm() {
                 สำหรับผู้มีสิทธิ์เข้าถึงข้อมูลตระกูลเท่านั้น
               </p>
 
-              <form onSubmit={handleSubmit} className="mt-6 space-y-4">
+              <form
+                method="post"
+                action="/login"
+                onSubmit={handleSubmit}
+                className="mt-6 space-y-4"
+              >
                 <div className="space-y-1.5">
                   <label
                     htmlFor="username"
@@ -252,6 +257,7 @@ export function LoginForm() {
                       className={`${inputClass} pr-11`}
                       placeholder="password"
                       required
+                      enterKeyHint="go"
                       disabled={phase === "loading" || phase === "success"}
                     />
                     <button
@@ -270,8 +276,7 @@ export function LoginForm() {
                 </div>
 
                 <button
-                  type="button"
-                  onClick={() => void handleLogin()}
+                  type="submit"
                   disabled={phase === "loading" || phase === "success"}
                   className="flex w-full items-center justify-center gap-2 rounded-xl bg-mint-brand py-3.5 text-sm font-semibold text-white shadow-sm transition-all duration-200 hover:bg-mint-brandDark hover:shadow-md hover:shadow-mint-brand/25 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-80"
                 >

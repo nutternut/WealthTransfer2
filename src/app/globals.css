@@ -343,3 +343,26 @@ input[type="checkbox"].check {
   background: transparent;
   color: inherit;
 }
+
+@keyframes chatCaret {
+  0%,
+  45% {
+    opacity: 1;
+  }
+  50%,
+  100% {
+    opacity: 0;
+  }
+}
+
+.chat-md.chat-typing::after {
+  content: "";
+  display: inline-block;
+  width: 1.5px;
+  height: 0.85em;
+  margin-left: 2px;
+  background: #334155;
+  border-radius: 1px;
+  vertical-align: -0.08em;
+  animation: chatCaret 0.9s steps(1) infinite;
+}

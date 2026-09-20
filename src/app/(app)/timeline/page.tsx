@@ -146,14 +146,9 @@ export default function TimelinePage() {
   return (
     <>
       {body}
-      <PlanChatWidget
-        hints={{
-          cashNeeded: planTax.breakdown.cashNeeded,
-          giftTax: planTax.breakdown.giftTax,
-          inheritanceTax: planTax.breakdown.inheritanceTax,
-          status: planTax.status,
-        }}
-      />
+      {/* ไม่ส่งตัวเลขแผนเข้าแชทอีก: บริการรับแค่ session_id + question
+          เพื่อไม่ให้มูลค่าทรัพย์สินลูกค้าเข้า transcript (PDPA) */}
+      <PlanChatWidget />
     </>
   );
 }
