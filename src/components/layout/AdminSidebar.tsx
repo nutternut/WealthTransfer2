@@ -3,54 +3,40 @@
 import { useEffect, useId, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { Activity, LogOut, Shield, X } from "lucide-react";
+import { Shield, LogOut, X } from "lucide-react";
 import {
   getStoredDisplayName,
-  getStoredFamilyName,
-  getStoredIsAdmin,
   getStoredUsername,
   logout,
 } from "@/lib/auth";
-import { navGroups } from "@/lib/nav";
+import { adminNavGroups } from "@/lib/admin-nav";
 
-type SidebarProps = {
+type AdminSidebarProps = {
   open: boolean;
   onClose: () => void;
 };
 
-export function Sidebar({ open, onClose }: SidebarProps) {
+export function AdminSidebar({ open, onClose }: AdminSidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
   const [logoutOpen, setLogoutOpen] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
-  const [displayName, setDisplayName] = useState("ผู้ใช้");
-  const [familyLabel, setFamilyLabel] = useState("");
-  const [initials, setInitials] = useState("U");
-  const [isAdmin, setIsAdmin] = useState(false);
+  const [displayName, setDisplayName] = useState("ผู้ดูแล");
+  const [initials, setInitials] = useState("AD");
   const logoutTitleId = useId();
 
   useEffect(() => {
-    const name = getStoredDisplayName() || getStoredUsername() || "ผู้ใช้";
-    const family = getStoredFamilyName() || "";
+    const name = getStoredDisplayName() || getStoredUsername() || "ผู้ดูแล";
     setDisplayName(name);
-    setFamilyLabel(family);
-    setIsAdmin(getStoredIsAdmin());
     const parts = name.replace(/^คุณ/, "").trim().split(/\s+/);
     const letters = parts
       .slice(0, 2)
       .map((p) => p[0] ?? "")
       .join("");
-    setInitials(letters || (getStoredUsername()?.slice(0, 2).toUpperCase() ?? "U"));
+    setInitials(
+      letters || (getStoredUsername()?.slice(0, 2).toUpperCase() ?? "AD"),
+    );
   }, []);
-
-  useEffect(() => {
-    if (!logoutOpen) return;
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    return () => {
-      document.body.style.overflow = prev;
-    };
-  }, [logoutOpen]);
 
   async function confirmLogout() {
     if (loggingOut) return;
@@ -80,16 +66,16 @@ export function Sidebar({ open, onClose }: SidebarProps) {
         } md:translate-x-0`}
       >
         <div className="flex h-16 flex-shrink-0 items-center justify-between border-b border-slate-50 px-6">
-          <Link href="/dashboard" className="flex items-center space-x-3" onClick={onClose}>
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-mint-brandLight text-mint-brand">
-              <Activity className="h-5 w-5" />
+          <Link href="/admin" className="flex items-center space-x-3" onClick={onClose}>
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-orange-50 text-orange-600">
+              <Shield className="h-5 w-5" />
             </div>
             <div>
               <span className="text-base font-bold tracking-tight text-mint-neutralDark">
                 WEALTH
               </span>
-              <span className="ml-1.5 rounded-md bg-mint-brandLight px-1.5 py-0.5 text-[10px] font-medium text-mint-brand">
-                TRANSFER
+              <span className="ml-1.5 rounded-md bg-orange-50 px-1.5 py-0.5 text-[10px] font-medium text-orange-700">
+                ADMIN
               </span>
             </div>
           </Link>
@@ -104,7 +90,7 @@ export function Sidebar({ open, onClose }: SidebarProps) {
         </div>
 
         <div className="flex-grow space-y-6 overflow-y-auto px-4 py-6">
-          {navGroups.map((group) => (
+          {adminNavGroups.map((group) => (
             <div key={group.title} className="space-y-1.5">
               <h4 className="px-3 text-[10px] font-bold uppercase tracking-wider text-slate-400">
                 {group.title}
@@ -113,7 +99,10 @@ export function Sidebar({ open, onClose }: SidebarProps) {
                 {group.items.map((item) => {
                   const Icon = item.icon;
                   const active =
-                    pathname === item.href || pathname.startsWith(`${item.href}/`);
+                    item.href === "/admin"
+                      ? pathname === "/admin"
+                      : pathname === item.href ||
+                        pathname.startsWith(`${item.href}/`);
                   return (
                     <Link
                       key={item.href}
@@ -121,7 +110,7 @@ export function Sidebar({ open, onClose }: SidebarProps) {
                       onClick={onClose}
                       className={`flex items-center space-x-3 rounded-xl px-3 py-2.5 text-xs transition-all duration-150 ${
                         active
-                          ? "bg-mint-brandLight font-semibold text-mint-brand"
+                          ? "bg-orange-50 font-semibold text-orange-700"
                           : "font-medium text-slate-500 hover:bg-slate-50/80 hover:text-slate-900"
                       }`}
                     >
@@ -135,28 +124,23 @@ export function Sidebar({ open, onClose }: SidebarProps) {
           ))}
         </div>
 
-        <div className="flex flex-shrink-0 flex-col border-t border-slate-50">
-          {isAdmin ? (
-            <Link
-              href="/admin"
-              onClick={onClose}
-              className="mx-4 mt-3 flex items-center gap-2 rounded-xl px-3 py-2 text-[11px] font-semibold text-orange-700 hover:bg-orange-50"
-            >
-              <Shield className="h-3.5 w-3.5" />
-              หลังบ้านผู้ดูแล
-            </Link>
-          ) : null}
-          <div className="flex items-center space-x-3 p-4">
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-mint-brand text-xs font-semibold text-white">
+        <div className="border-t border-slate-50 p-4">
+          <Link
+            href="/dashboard"
+            onClick={onClose}
+            className="mb-3 block rounded-xl px-3 py-2 text-[11px] font-medium text-slate-500 hover:bg-slate-50 hover:text-slate-800"
+          >
+            ไปหน้าครอบครัว
+          </Link>
+          <div className="flex flex-shrink-0 items-center space-x-3">
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-orange-500 text-xs font-semibold text-white">
               {initials}
             </div>
             <div className="min-w-0 flex-grow">
               <div className="truncate text-xs font-semibold text-slate-700">
                 {displayName}
               </div>
-              <div className="truncate text-[10px] text-slate-400">
-                {familyLabel || "Wealth Transfer"}
-              </div>
+              <div className="truncate text-[10px] text-slate-400">ผู้ดูแลระบบ</div>
             </div>
             <button
               type="button"
@@ -184,43 +168,36 @@ export function Sidebar({ open, onClose }: SidebarProps) {
               aria-label="ปิด"
               onClick={() => setLogoutOpen(false)}
             />
-
             <div className="relative w-full max-w-sm overflow-hidden rounded-2xl border border-slate-100 bg-white text-left shadow-xl">
               <div className="flex items-center justify-between border-b border-rose-100 bg-rose-50 px-5 py-4">
-                <div className="flex items-center space-x-2.5 text-rose-700">
-                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-white shadow-sm">
-                    <LogOut className="h-4 w-4 text-rose-500" />
-                  </div>
-                  <h3 className="text-sm font-bold" id={logoutTitleId}>
-                    ออกจากระบบ
-                  </h3>
-                </div>
+                <h3 className="text-sm font-bold text-rose-700" id={logoutTitleId}>
+                  ออกจากระบบ
+                </h3>
                 <button
                   type="button"
                   onClick={() => setLogoutOpen(false)}
-                  className="rounded-lg p-1 text-slate-400 transition hover:bg-white hover:text-slate-600"
+                  className="rounded-lg p-1 text-slate-400"
                   aria-label="ปิดหน้าต่าง"
                 >
                   <X className="h-5 w-5" />
                 </button>
               </div>
-
               <div className="space-y-5 p-5">
                 <p className="text-xs leading-relaxed text-slate-600">
-                  คุณต้องการออกจากระบบหรือไม่? จะต้องเข้าสู่ระบบอีกครั้งเพื่อใช้งานต่อ
+                  คุณต้องการออกจากระบบหรือไม่?
                 </p>
                 <div className="flex items-center justify-end gap-2">
                   <button
                     type="button"
                     onClick={() => setLogoutOpen(false)}
-                    className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-xs font-semibold text-slate-600 transition hover:bg-slate-50"
+                    className="rounded-xl px-3 py-2 text-xs font-semibold text-slate-500 hover:bg-slate-50"
                   >
                     ยกเลิก
                   </button>
                   <button
                     type="button"
                     onClick={confirmLogout}
-                    className="rounded-xl bg-rose-500 px-4 py-2 text-xs font-semibold text-white transition hover:bg-rose-600"
+                    className="rounded-xl bg-rose-500 px-3 py-2 text-xs font-semibold text-white hover:bg-rose-600"
                   >
                     ออกจากระบบ
                   </button>

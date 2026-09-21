@@ -69,7 +69,9 @@ export function LoginForm() {
     const destination =
       next && next.startsWith("/") && !next.startsWith("//")
         ? next
-        : "/dashboard";
+        : result.isAdmin
+          ? "/admin"
+          : "/dashboard";
 
     window.setTimeout(() => {
       router.replace(destination);

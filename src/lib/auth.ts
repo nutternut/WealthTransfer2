@@ -7,6 +7,7 @@ const OWNER_STORAGE_KEY = "wt_owner_id";
 const USERNAME_STORAGE_KEY = "wt_username";
 const FAMILY_STORAGE_KEY = "wt_family_name";
 const DISPLAY_STORAGE_KEY = "wt_display_name";
+const ADMIN_STORAGE_KEY = "wt_is_admin";
 
 const SESSION_MAX_AGE = 60 * 60 * 24 * 7; // 7 days
 
@@ -30,9 +31,11 @@ function setLocalSession(opts: {
   username: string;
   displayName?: string | null;
   familyName?: string | null;
+  isAdmin?: boolean;
 }) {
   localStorage.setItem(OWNER_STORAGE_KEY, opts.userId);
   localStorage.setItem(USERNAME_STORAGE_KEY, opts.username);
+  localStorage.setItem(ADMIN_STORAGE_KEY, opts.isAdmin ? "1" : "0");
   if (opts.displayName) {
     localStorage.setItem(DISPLAY_STORAGE_KEY, opts.displayName);
   } else {
@@ -50,10 +53,17 @@ function clearLocalSession() {
   localStorage.removeItem(USERNAME_STORAGE_KEY);
   localStorage.removeItem(FAMILY_STORAGE_KEY);
   localStorage.removeItem(DISPLAY_STORAGE_KEY);
+  localStorage.removeItem(ADMIN_STORAGE_KEY);
 }
 
 export type LoginResult =
-  | { ok: true; userId: string; username: string; familyName?: string }
+  | {
+      ok: true;
+      userId: string;
+      username: string;
+      familyName?: string;
+      isAdmin: boolean;
+    }
   | { ok: false; message: string };
 
 type WealthLoginRow = {
@@ -62,6 +72,7 @@ type WealthLoginRow = {
   display_name: string | null;
   family_id: string | null;
   family_name: string | null;
+  is_admin?: boolean | null;
 };
 
 /**
@@ -101,11 +112,14 @@ export async function loginWithUsernamePassword(
     };
   }
 
+  const isAdmin = Boolean(row.is_admin);
+
   setLocalSession({
     userId: row.user_id,
     username: row.username,
     displayName: row.display_name,
     familyName: row.family_name ?? row.display_name,
+    isAdmin,
   });
   setSessionCookie(row.username);
 
@@ -114,6 +128,7 @@ export async function loginWithUsernamePassword(
     userId: row.user_id,
     username: row.username,
     familyName: row.family_name ?? undefined,
+    isAdmin,
   };
 }
 
@@ -151,4 +166,9 @@ export function getStoredDisplayName(): string | null {
 export function getStoredFamilyName(): string | null {
   if (typeof window === "undefined") return null;
   return localStorage.getItem(FAMILY_STORAGE_KEY);
+}
+
+export function getStoredIsAdmin(): boolean {
+  if (typeof window === "undefined") return false;
+  return localStorage.getItem(ADMIN_STORAGE_KEY) === "1";
 }

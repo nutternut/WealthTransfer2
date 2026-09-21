@@ -18,6 +18,7 @@ create table if not exists public.wealth_users (
   password_hash   text not null,
   display_name    text,
   is_active       boolean not null default true,
+  is_admin        boolean not null default false,
   created_at      timestamptz not null default now(),
   updated_at      timestamptz not null default now(),
 
@@ -28,11 +29,17 @@ create table if not exists public.wealth_users (
 create unique index if not exists wealth_users_username_lower_uidx
   on public.wealth_users (lower(username));
 
+alter table public.wealth_users
+  add column if not exists is_admin boolean not null default false;
+
 comment on table public.wealth_users is
   'บัญชีเข้าใช้แอป — username/password (hash) ไม่พึ่ง auth.users';
 
 comment on column public.wealth_users.password_hash is
   'bcrypt hash จาก extensions.crypt — ห้าม select ออกไปที่ client';
+
+comment on column public.wealth_users.is_admin is
+  'บัญชีหลังบ้าน — เข้า /admin ได้';
 
 -- -----------------------------------------------------------------------------
 -- 2) สิทธิ์: ห้ามอ่าน password_hash ผ่าน PostgREST
@@ -65,7 +72,9 @@ revoke all on table public.wealth_users from anon, authenticated;
 -- -----------------------------------------------------------------------------
 -- 3) RPC: login — คืน user_id ถ้า username/password ถูก
 -- -----------------------------------------------------------------------------
-create or replace function public.wealth_login(
+drop function if exists public.wealth_login(text, text);
+
+create function public.wealth_login(
   p_username text,
   p_password text
 )
@@ -74,7 +83,8 @@ returns table (
   username text,
   display_name text,
   family_id text,
-  family_name text
+  family_name text,
+  is_admin boolean
 )
 language plpgsql
 security definer
@@ -110,7 +120,8 @@ begin
     v_user.username,
     v_user.display_name,
     f.id,
-    f.name
+    f.name,
+    v_user.is_admin
   from (select 1) _
   left join public.wealth_families f
     on f.owner_id = v_user.id
